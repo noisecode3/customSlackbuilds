@@ -25,7 +25,7 @@
 cd $(dirname $0) ; CWD=$(pwd)
 
 PRGNAM=polybar
-VERSION=${VERSION:-3.6.3}
+VERSION=${VERSION:-git}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -69,17 +69,22 @@ set -e
 rm -rf $PKG
 mkdir -p $TMP $PKG $OUTPUT
 cd $TMP
-rm -rf $PRGNAM-$VERSION
-git clone --recursive https://github.com/polybar/polybar
-mv $PRGNAM $PRGNAM-$VERSION
-cd $PRGNAM-$VERSION
+rm -rf $PRGNAM
+if [ "$VERSION" != "git" ]; then
+  git clone --depth 1 -b $VERSION --recursive https://github.com/polybar/polybar
+else
+  git clone --recursive https://github.com/polybar/polybar
+fi
+cd polybar
+VERSION=$(git describe --tags)
+VERSION=${VERSION::-10}
+VERSION=$(echo $VERSION | tr '-' . )
 chown -R root:root .
 find -L . \
   \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
    -o -perm 511 \) -exec chmod 755 {} \; -o \
   \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
    -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
-
 
 export PYTHON=python3
 
@@ -105,7 +110,25 @@ cp -a LICENSE README.md SUPPORT.md $PKG/usr/doc/$PRGNAM-$VERSION
 cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
 
 mkdir -p $PKG/install
-cat $CWD/slack-desc > $PKG/install/slack-desc
+echo "# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+       |-----handy-ruler------------------------------------------------------|
+polybar: polybar (a fast and easy-to-use status bar)
+polybar:
+polybar: Polybar aims to help users build beautiful and highly customizable
+polybar: status bars for their desktop environment, without the need of having
+polybar: a black belt in shell scripting.
+polybar:
+polybar:
+polybar:
+polybar:
+polybar:
+polybar:" > $PKG/install/slack-desc
 
 cd $PKG
 /sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE
