@@ -9,3 +9,4 @@ Optional dependencies for extended module support:
 
 Building the documentation and the man pages requires the optional
 dependency Sphinx.
+This requires: xcb-util-xrm

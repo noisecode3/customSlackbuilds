@@ -1,2 +1,2 @@
-slackbuilds with git added, mostly i3 stuff. There will only be 2 files per build.
-package.README and package.SlackBuild
+slackbuilds that use git. There will only be 2 files per build. package.README and package.SlackBuild
+all package must pass sbopkglint
