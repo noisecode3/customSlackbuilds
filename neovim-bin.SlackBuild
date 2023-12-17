@@ -87,7 +87,7 @@ mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
 cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
 
 mkdir -p $PKG/install
-echo "#!/bin/bash
+cat <<EOINS >> $PKG/install/slack-desc
 # HOW TO EDIT THIS FILE:
 # The "handy ruler" below makes it easier to edit a package description.
 # Line up the first '|' above the ':' following the base package name, and
@@ -96,7 +96,7 @@ echo "#!/bin/bash
 # customary to leave one space after the ':' except on otherwise blank lines.
 
           |-----handy-ruler------------------------------------------------------|
-neovim-bin: neovim (Vim fork)
+neovim-bin: neovim-bin (Vim fork)
 neovim-bin:
 neovim-bin: Neovim is a fork of the venerable text-editor vim, focused on
 neovim-bin: extensibility and usability. It is not a rewrite but a continuation
@@ -107,16 +107,17 @@ neovim-bin:
 neovim-bin: See a list of differences at :help vim-differences.
 neovim-bin: Homepage: https://neovim.io
 neovim-bin:
-" > $PKG/install/slack-desc
-echo "if [ -x /usr/bin/update-desktop-database ]; then
-    /usr/bin/update-desktop-database -q usr/share/applications >/dev/null 2>&1
+EOINS
+cat <<EOINS >> $PKG/install/doinst.sh
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database -q usr/share/applications >/dev/null 2>&1
 fi
 if [ -e usr/share/icons/hicolor/icon-theme.cache ]; then
-    if [ -x /usr/bin/gtk-update-icon-cache ]; then
-        /usr/bin/gtk-update-icon-cache -f usr/share/icons/hicolor >/dev/null 2>&1
-    fi
+  if [ -x /usr/bin/gtk-update-icon-cache ]; then
+    /usr/bin/gtk-update-icon-cache -f usr/share/icons/hicolor >/dev/null 2>&1
+  fi
 fi
-" > $PKG/install/doinst.sh
+EOINS
 
 cd $PKG
 /sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE
