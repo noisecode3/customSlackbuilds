@@ -25,7 +25,7 @@
 cd $(dirname $0) ; CWD=$(pwd)
 
 PRGNAM=neovim-bin
-VERSION=${VERSION:-0.9.4}
+VERSION=${VERSION:-0.9.5}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -64,7 +64,7 @@ mkdir -p $TMP $PKG/usr $OUTPUT
 cd $TMP
 rm -rf nvim-linux64 nvim-linux64.tar.gz
 wget https://github.com/neovim/neovim/releases/download/v$VERSION/nvim-linux64.tar.gz
-if echo "dbf4eae83647ca5c3ce1cd86939542a7b6ae49cd78884f3b4236f4f248e5d447  nvim-linux64.tar.gz" | sha256sum -c; then
+if echo "44ee395d9b5f8a14be8ec00d3b8ead34e18fe6461e40c9c8c50e6956d643b6ca  nvim-linux64.tar.gz" | sha256sum -c; then
     tar xvf nvim-linux64.tar.gz
 else
     echo "download problem"
