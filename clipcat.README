@@ -1,0 +1,8 @@
+With i3 and xclip it will only remember one copy and there is no list
+All you need to know to get started is in the readme in the package
+It was a bit complicated to configure but to help you can say you should start
+with the default config and not the one from the readme, like this command:
+clipcat-menu default-config > .config/clipcat/clipcat-menu.toml
+
+from slackbuilds.org
+protobuf3
