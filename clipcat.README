@@ -1,8 +1,41 @@
-With i3 and xclip it will only remember one copy and there is no list
-All you need to know to get started is in the readme in the package
-It was a bit complicated to configure but to help you can say you should start
-with the default config and not the one from the readme, like this command:
-clipcat-menu default-config > .config/clipcat/clipcat-menu.toml
+With i3 and xclip or xsel it will only remember one copy, there is no list.
+Information is in the readme.md and there is no man but the help command.
 
-from slackbuilds.org
+How to get started with alacritty and i3, how I did it
+Alcritty clipboard with xsel or xclip would need some extra configuration
+
+mkdir -p ~/.config/clipcat
+clipcat-menu default-config > ~/.config/clipcat/clipcat-menu.toml
+clipcatctl default-config > ~/.config/clipcat/clipcatctl.toml
+clipcatd default-config > ~/.config/clipcat/clipcatd.toml
+
+Set dbus to false in clipcatd.toml
+[dbus]
+enable = false
+
+In ~/.config/i3/config
+exec --no-startup-id clipcatd
+
+set $launcher-clipboard-insert clipcat-menu insert
+set $launcher-clipboard-remove clipcat-menu remove
+
+bindsym $mod+p exec $launcher-clipboard-insert
+bindsym $mod+o exec $launcher-clipboard-remove
+
+In ~/.bash_login
+if [ "$TERM" = "alacritty" ]; then
+    id=$(clipcatctl list 2>/dev/null | head -1 | awk -F':' '{print $1}')
+    if [ -n "$id" ]; then
+        clip=$(clipcatctl get "$id" 2>/dev/null)
+        if [ -n "$clip" ]; then
+            echo -n "$clip" | xsel -ib
+        else
+            echo "Clipcatctl returned an empty value for id=$id"
+        fi
+    else
+        echo "No id found from clipcatctl list"
+    fi
+fi
+
+From slackbuilds.org
 protobuf3
