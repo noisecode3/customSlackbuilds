@@ -32,6 +32,7 @@ if [ "$TERM" = "alacritty" ]; then
         else
             echo "Clipcatctl returned an empty value for id=$id"
         fi
+        unset clip
     else
         echo "No id found from clipcatctl list"
     fi
