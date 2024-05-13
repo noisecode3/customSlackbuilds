@@ -25,7 +25,7 @@
 cd $(dirname $0) ; CWD=$(pwd)
 
 PRGNAM=clipcat-bin
-VERSION=${VERSION:-0.16.4}
+VERSION=${VERSION:-0.16.6}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -66,7 +66,7 @@ rm -f clipcat-v$VERSION-x86_64-unknown-linux-musl.tar.gz
 preurl="https://github.com/xrelkd/clipcat/releases/download/"
 file="clipcat-v$VERSION-x86_64-unknown-linux-musl.tar.gz"
 wget $preurl"v$VERSION/clipcat-v$VERSION-x86_64-unknown-linux-musl.tar.gz"
-if echo "6fa0f3067ba05696254a4f92e69221932fb7b31c8698ec6ae023bfb05cc564ad $file" | sha256sum -c; then
+if echo "825294ccc282b040ae66a9af9cbf4d190d56f526472332f7001882f88b839729 $file" | sha256sum -c; then
   cd $PKG/usr/bin
   tar xvf $TMP/$file
   chown -R root:root .
