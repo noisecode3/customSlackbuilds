@@ -85,7 +85,7 @@ rm -f nordvpn_${VERSION}_amd64.deb
 wget --trust-server-names https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn_${VERSION}_amd64.deb
 
 # Verify the checksum
-if echo "c40e7a8f7f9aa292c342b1ee653ea02ae513da59935b7048a600570993aab2da  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
+if echo "5173490d5536e292fb0fc65eb1a0628a0f594779e82213a37ac45a0632f051c9  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
   echo "Checksum verified."
 
   # Extract the data.tar.gz file
@@ -276,18 +276,18 @@ cat <<EOINS > $PKG/install/slack-desc
 # You must make exactly 11 lines for the formatting to be correct.  It's also
 # customary to leave one space after the ':' except on otherwise blank lines.
 
-       |-----handy-ruler------------------------------------------------------|
-nordvpn: nordvpn (Protect your privacy online.)
-nordvpn:
-nordvpn: The NordVPN app for Linux protects your sensitive data
-nordvpn: with military-grade encryption, so that whatever you
-nordvpn: do online stays secure and private. More than 5000
-nordvpn: servers worldwide. No logs of your online activity.
-nordvpn: Secure up to 6 devices with a single account.
-nordvpn: Access online content securely, with no restrictions.
-nordvpn:
-nordvpn: https://www.nordvpn.com/
-nordvpn:
+           |-----handy-ruler------------------------------------------------------|
+nordvpn-bin: nordvpn-bin (Protect your privacy online.)
+nordvpn-bin:
+nordvpn-bin: The NordVPN app for Linux protects your sensitive data
+nordvpn-bin: with military-grade encryption, so that whatever you
+nordvpn-bin: do online stays secure and private. More than 5000
+nordvpn-bin: servers worldwide. No logs of your online activity.
+nordvpn-bin: Secure up to 6 devices with a single account.
+nordvpn-bin: Access online content securely, with no restrictions.
+nordvpn-bin:
+nordvpn-bin: https://www.nordvpn.com/
+nordvpn-bin:
 EOINS
 
 cat <<EOINS > $PKG/install/doinst.sh
