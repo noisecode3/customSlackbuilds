@@ -50,14 +50,19 @@ And connect using:
 You can always switch back to OpenVPN using this command:
 'nordvpn set technology OpenVPN'
 
-NOTE: Setup easy with NetworkManager with root add a file like this to
-/etc/NetworkManager/dispatcher.d/99-custum-script
+Setting Up NordVPN with NetworkManager
+
+To set up NordVPN to automatically connect with NetworkManager and enable
+the killswitch, follow these steps:
+Create the Dispatcher Script
+  Create a script file in the /etc/NetworkManager/dispatcher.d/ directory.
+  You will need root permissions to do this. Name the file 99-custom-script.
+
 
 #!/bin/bash
-# Its important to use sleep 1 with su -c
-# Can someone send you funny virus in that one second? Maybe... lol
-# It gets funky if it don't wait one second and/or just trigger killswitch
-# But change eth0 to you're interface and Sweden to you're country
+# This script automatically enables the NordVPN killswitch and connects to a
+# server in Sweden when the specified network interface comes up.
+# Replace 'eth0' with your network interface and 'Sweden' with your desired country.
 
 INTERFACE=$1
 STATUS=$2
@@ -73,22 +78,19 @@ case $STATUS in
         ;;
 esac
 
-NOTE: The killswitch is important if you update you're kernel it could
-fail to connect and you'll be exposed.
 
-NOTE: Check this when updated https://www.dnsleaktest.com/
-Also see
-https://support.nordvpn.com/hc/en-us/articles/20094975629585-Change-your-DNS-servers-on-Linux-with-NordVPN
+Important Notes:
 
-NOTE: Use something like tcpdump to see that all IP addresses is you're local
-network or a NordVPN server.
-run command:
-tcpdump
+    Killswitch: Enabling the killswitch is crucial to ensure your internet
+    connection is secure and private. If the VPN fails to connect, the
+    killswitch will prevent any data from being sent over the internet,
+    protecting you from potential leaks. Testing for Leaks: After setting
+    up the VPN, verify that your DNS is not leaking. Use tools like DNS Leak Test.
+    Network Monitoring:
+        Use tcpdump to monitor network traffic and ensure all IP addresses are either local or associated with NordVPN servers:
 
-NOTE: There should not be a program here you don't know about or don't trust.
-run command:
-netstat -p
+   https://www.dnsleaktest.com/
+   See also
+   https://support.nordvpn.com/hc/en-us/articles/20094975629585-Change-your-DNS-servers-on-Linux-with-NordVPN
 
-There is a lot more tools and things you can do to monitor you're network and
-make it more secure and private. You can randomize mac address and host name
-also but this should get you started.
+Meshnet will probably not work out of the box, I don't use it.
