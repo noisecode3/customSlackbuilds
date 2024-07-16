@@ -1,0 +1,96 @@
+This is a test package for renovate
+
+The NordVPN app for Linux protects your sensitive data with
+military-grade encryption, so that whatever you do online stays secure
+and private.
+More than 5000 servers worldwide. No logs of your online activity.
+Secure up to 6 devices with a single account.
+Access online content securely, with no restrictions.
+
+This script requires a 'nordvpn' group to exist before running.
+You can create this group like this (Run these as root):
+    groupadd -g 373 nordvpn
+    usermod -aG nordvpn $USER (Replace $USER with your username)
+Then log out of the system and login again.
+
+Allowing normal users to use the nordvpn command by adding them to
+the nordvpn group can introduce security risks. It's generally safer
+to restrict this capability to root or highly trusted administrative users.
+If you must allow normal users to access VPN functionalities for first time
+login with secure web browser like Firefox and two-factor authentication (2FA)
+On a secure network
+
+run command:
+/etc/rc.d/rc.nordvpn give_socket
+then /etc/rc.d/rc.nordvpn take_socket
+Do not let a home user control the vpn for general use
+
+The following can be used to start/stop NordVPN automatically:
+/etc/rc.d/rc.local
+  if [ -x /etc/rc.d/rc.nordvpn ]; then
+    /etc/rc.d/rc.nordvpn start
+  fi
+
+/etc/rc.d/rc.local_shutdown
+  if [ -x /etc/rc.d/rc.nordvpn ]; then
+    /etc/rc.d/rc.nordvpn stop
+  fi
+
+NOTE: NordVPN has implemented NordLynx (WireGuard protocol) into the
+app. Dependencies already satisfied at full install.
+In case of any issue, you need to reinstall following packages:
+
+wireguard-linux-compat
+wireguard-tools
+
+Then you can switch to NordLynx with the following command:
+'nordvpn set technology NordLynx'
+
+And connect using:
+'nordvpn c'
+
+You can always switch back to OpenVPN using this command:
+'nordvpn set technology OpenVPN'
+
+NOTE: Setup easy with NetworkManager with root add a file like this to
+/etc/NetworkManager/dispatcher.d/99-custum-script
+
+#!/bin/bash
+# Its important to use sleep 1 with su -c
+# Can someone send you funny virus in that one second? Maybe... lol
+# It gets funky if it don't wait one second and/or just trigger killswitch
+# But change eth0 to you're interface and Sweden to you're country
+
+INTERFACE=$1
+STATUS=$2
+
+case $STATUS in
+    up)
+        if [ "$INTERFACE" = "eth0" ]; then
+            sleep 1
+            su -c "nordvpn set killswitch on; nordvpn c Sweden"
+        fi
+        ;;
+    *)
+        ;;
+esac
+
+NOTE: The killswitch is important if you update you're kernel it could
+fail to connect and you'll be exposed.
+
+NOTE: Check this when updated https://www.dnsleaktest.com/
+Also see
+https://support.nordvpn.com/hc/en-us/articles/20094975629585-Change-your-DNS-servers-on-Linux-with-NordVPN
+
+NOTE: Use something like tcpdump to see that all IP addresses is you're local
+network or a NordVPN server.
+run command:
+tcpdump
+
+NOTE: There should not be a program here you don't know about or don't trust.
+run command:
+netstat -p
+
+There is a lot more tools and things you can do to monitor you're network and
+make it more secure and private. You can randomize mac address and host name
+also but this should get you started.

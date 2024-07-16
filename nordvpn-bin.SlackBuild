@@ -1,0 +1,314 @@
+#!/bin/bash
+
+# Slackware build script for nordvpn-bin
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+cd $(dirname $0) || exit 1 ; CWD=$(pwd)
+
+PRGNAM=nordvpn-bin
+VERSION=${VERSION:-3.17.2}
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+
+# Select nordvpn's default group
+NORD_GROUP=${NORD_GROUP:-nordvpn}
+
+if [ -z "$ARCH" ]; then
+  case "$( uname -m )" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+       *) ARCH=$( uname -m ) ;;
+  esac
+fi
+
+if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
+  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
+  exit 0
+fi
+
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+set -e
+
+if [ "$ARCH" = "i586" ]; then
+  DEBARCH="i386"
+elif [ "$ARCH" = "i686" ]; then
+  DEBARCH="i386"
+elif [ "$ARCH" = "x86_64" ]; then
+  DEBARCH="amd64"
+else
+  echo "Package for $ARCH architecture is not available."
+  exit 1
+fi
+
+bailout() {
+  echo "  You must have a $NORD_GROUP group to run this script. "
+  echo "  Something like this should suffice for most systems (Run as root): "
+  echo "    # groupadd -g 373 $NORD_GROUP "
+  echo "    # usermod -aG $NORD_GROUP \$USER (Replace \$USER with your username)"
+  echo "  Then log out of the system and login again."
+  exit 1
+}
+
+# Bail if group isn't valid on your system.
+if ! grep -q "^$NORD_GROUP:" /etc/group; then
+  bailout
+fi
+
+rm -rf $PKG
+mkdir -p $TMP $PKG $OUTPUT
+cd $TMP
+
+rm -f nordvpn_${VERSION}_amd64.deb
+wget --trust-server-names https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn_${VERSION}_amd64.deb
+
+# Verify the checksum
+if echo "c40e7a8f7f9aa292c342b1ee653ea02ae513da59935b7048a600570993aab2da  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
+  echo "Checksum verified."
+
+  # Extract the data.tar.gz file
+  ar p nordvpn_${VERSION}_amd64.deb data.tar.gz > $TMP/data.tar.gz
+
+  # Debugging output to check if the file is created
+  if [ -f $TMP/data.tar.gz ]; then
+    echo "data.tar.gz extracted successfully."
+
+    # Extract the contents of the tar.gz file to the package directory
+    bsdtar -C $PKG -xzf $TMP/data.tar.gz
+
+    # Debugging output to confirm extraction
+    if [ $? -eq 0 ]; then
+      echo "Extraction completed successfully."
+    else
+      echo "Extraction failed."
+      exit 1
+    fi
+  else
+    echo "Failed to extract data.tar.gz."
+    exit 1
+  fi
+else
+  echo "Download problem or checksum mismatch."
+  exit 1
+fi
+
+cd $PKG
+rm -fR etc usr/lib
+
+# Move man where the man likes
+mv usr/share/man usr/
+rm -rf $PKG/usr/share/doc
+
+mkdir -p $PKG/etc/rc.d
+
+rcfile=$(cat <<'EOINS'
+#!/usr/bin/env bash
+
+# Short-Description: Protect your privacy online and access media content with no regional restrictions.
+# Strong encryption and no-log policy with 3000+ servers in 60+ countries.
+### END INIT INFO
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+
+BASE=nordvpn
+
+DAEMON=/usr/sbin/${BASE}d
+PID=/var/run/$BASE.pid
+SOCK=/run/$BASE/${BASE}d.sock
+SOCKDIR=/run/$BASE
+
+nordvpnd_give_socket() {
+  chown root:$BASE $SOCK
+}
+
+nordvpnd_take_socket() {
+  chown root:root $SOCK
+}
+
+create_socket_dir() {
+  if [[ -d $SOCKDIR ]]; then
+    return
+  fi
+  mkdir -m 0770 $SOCKDIR
+}
+
+checkuser() {
+    status=0
+    for u in $(who | awk '{print $1}' | sort | uniq)
+    do
+          if [ "$u" == "$1" ]; then
+                return 0
+	  fi
+    done
+    return 1
+}
+#
+# Function that starts the daemon
+#
+nordvpnd_start()
+{
+  checkuser
+  create_socket_dir
+  rm -rf $SOCK
+  if [ -s $PID ]; then
+    echo "$BASE is already running: $(cat $PID)"
+    exit 1
+  fi
+
+  if [ -x $DAEMON ]; then
+    echo "Starting $BASE"
+    sleep 1
+    # $DAEMON start-stop-daemon --start --quiet -g "nordvpn" --pidfile $PID --exec $DAEMON
+    $DAEMON > /dev/null &
+    pidof $DAEMON > $PID
+    sleep 10
+    if [ -S "$SOCK" ]; then
+      echo "$BASE has been started."
+    else
+      echo "$BASE failed to start. Please restart the daemon."
+    fi
+  fi
+}
+
+#
+# Function that stops the daemon
+#
+nordvpnd_stop()
+{
+  if [ -s $PID ]; then
+    echo "Stopping $BASE"
+    sleep 1
+    kill $(cat $PID)
+    rm -rf $PID $SOCK
+    sleep 1
+    echo "$BASE has been stopped."
+  else
+    echo "$BASE is not running."
+  fi
+}
+
+#
+# Function that restarts the daemon
+#
+nordvpnd_restart()
+{
+  nordvpnd_stop
+  sleep 1
+  nordvpnd_start
+}
+
+#
+# Function that shows the current status of the daemon
+#
+nordvpnd_status()
+{
+  if [ -s $PID ]; then
+    echo "$BASE is running: $(cat $PID)"
+  else
+    echo "$BASE is not running."
+  fi
+}
+
+
+case "$1" in
+  start)
+    nordvpnd_start
+    ;;
+  stop)
+    nordvpnd_stop
+    ;;
+  restart)
+    nordvpnd_restart
+    ;;
+  status)
+    nordvpnd_status
+    ;;
+  give_socket)
+    nordvpnd_give_socket
+    ;;
+  take_socket)
+    nordvpnd_take_socket
+    ;;
+  *)
+    echo $"Usage: $0 {start|stop|restart|status|give_socket|take_socket}"
+    exit 1
+    ;;
+esac
+
+EOINS
+)
+
+echo "$rcfile" > $PKG/etc/rc.d/rc.$PRGNAM
+chown root:root  $PKG/etc/rc.d/rc.$PRGNAM
+chmod 0755       $PKG/etc/rc.d/rc.$PRGNAM
+
+mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
+cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+
+mkdir -p $PKG/install
+cat <<EOINS > $PKG/install/slack-desc
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+       |-----handy-ruler------------------------------------------------------|
+nordvpn: nordvpn (Protect your privacy online.)
+nordvpn:
+nordvpn: The NordVPN app for Linux protects your sensitive data
+nordvpn: with military-grade encryption, so that whatever you
+nordvpn: do online stays secure and private. More than 5000
+nordvpn: servers worldwide. No logs of your online activity.
+nordvpn: Secure up to 6 devices with a single account.
+nordvpn: Access online content securely, with no restrictions.
+nordvpn:
+nordvpn: https://www.nordvpn.com/
+nordvpn:
+EOINS
+
+cat <<EOINS > $PKG/install/doinst.sh
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database -q usr/share/applications >/dev/null 2>&1
+fi
+
+if [ -x /usr/bin/update-mime-database ]; then
+  /usr/bin/update-mime-database usr/share/mime >/dev/null 2>&1
+fi
+
+if [ -e usr/share/icons/hicolor/icon-theme.cache ]; then
+  if [ -x /usr/bin/gtk-update-icon-cache ]; then
+    /usr/bin/gtk-update-icon-cache -f usr/share/icons/hicolor >/dev/null 2>&1
+  fi
+fi
+
+if [ -x /etc/rc.d/rc.nordvpn ]; then
+    /etc/rc.d/rc.nordvpn restart > /dev/null
+fi
+EOINS
+
+cd $PKG
+/sbin/makepkg -l y -p -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE
