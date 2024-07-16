@@ -260,9 +260,9 @@ esac
 EOINS
 )
 
-echo "$rcfile" > $PKG/etc/rc.d/rc.$PRGNAM
-chown root:root  $PKG/etc/rc.d/rc.$PRGNAM
-chmod 0755       $PKG/etc/rc.d/rc.$PRGNAM
+echo "$rcfile" > $PKG/etc/rc.d/rc.nordvpn
+chown root:root  $PKG/etc/rc.d/rc.nordvpn
+chmod 0755       $PKG/etc/rc.d/rc.nordvpn
 
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
 cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
