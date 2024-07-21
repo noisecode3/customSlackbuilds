@@ -82,13 +82,14 @@ find -L . \
   \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
    -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
+mkdir  completion
 cargo build --release
 cargo run --release -- --man > just.1
-cargo run --release -- --completions bash > just-completions
+cargo run --release -- --completions bash > completion/just
 
 install -Dm755 -t "${PKG}/usr/bin/" "target/release/just"
 install -Dm644 -t "${PKG}/usr/man/man1/" "just.1"
-install -Dm644 -t "${PKG}/usr/share/bash-completion/completions/" "just-completions"
+install -Dm644 -t "${PKG}/usr/share/bash-completion/completions/" "completion/just"
 
 find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
   | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true

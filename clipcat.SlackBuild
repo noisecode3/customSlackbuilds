@@ -73,9 +73,8 @@ rm -rf $PRGNAM
 git clone --depth 1 -b $VERSION --recursive https://github.com/xrelkd/clipcat
 cd clipcat
 VERSION=$(git describe --tags)
-VERSION=${VERSION::-10}
+VERSION=${VERSION::-9}
 VERSION=$(echo $VERSION | tr '-' . )
-VERSION=${VERSION:1}
 chown -R root:root .
 find -L . \
   \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
@@ -83,12 +82,17 @@ find -L . \
   \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
    -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
+mkdir -p completion
 cargo build --release
-install -Dm755 -t "$PKG/usr/bin" \
-    target/release/clipcat-menu \
-    target/release/clipcat-notify \
-    target/release/clipcatctl \
-    target/release/clipcatd
+binaries=("clipcat-menu" "clipcat-notify" "clipcatctl" "clipcatd")
+for bin in "${binaries[@]}"; do
+    target/release/$bin completions bash > completion/$bin
+done
+
+install -Dm755 -t "$PKG/usr/bin" "${binaries[@]/#/target/release/}"
+for bin in "${binaries[@]}"; do
+    install -Dm644 completion/$bin "${PKG}/usr/share/bash-completion/completions/$bin"
+done
 
 find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
   | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
