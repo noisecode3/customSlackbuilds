@@ -70,11 +70,9 @@ rm -rf $PKG
 mkdir -p $TMP $PKG $OUTPUT
 cd $TMP
 rm -rf $PRGNAM
-git clone --depth 1 -b $VERSION --recursive https://github.com/xrelkd/clipcat
+git clone --depth 1 -b $VERSION https://github.com/xrelkd/clipcat
 cd clipcat
-VERSION=$(git describe --tags)
-VERSION=${VERSION::-9}
-VERSION=$(echo $VERSION | tr '-' . )
+VERSION=$(git describe --tags | sed 's/^v//' )
 chown -R root:root .
 find -L . \
   \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
