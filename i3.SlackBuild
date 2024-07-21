@@ -75,10 +75,10 @@ mkdir -p $TMP $PKG $OUTPUT
 cd $TMP
 rm -rf $PRGNAM
 if [ "$VERSION" != "git" ]; then
-  git clone --depth 1 -b $VERSION --recursive https://github.com/i3/i3
+  git clone --depth 1 -b $VERSION https://github.com/i3/i3
   cd $PRGNAM
 else
-  git clone --recursive https://github.com/i3/i3
+  git clone https://github.com/i3/i3
   cd $PRGNAM
   VERSION=$(git describe --tags)
   VERSION=${VERSION::-10}
@@ -98,6 +98,7 @@ meson setup \
   --mandir /usr/man \
   --sysconfdir /etc \
   --localstatedir /var \
+  -Dmans=true \
   build
 CFLAGS="$SLKCFLAGS" ninja -C build
 DESTDIR=$PKG ninja -C build install
@@ -109,12 +110,11 @@ find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | gr
 mv $PKG/etc/i3/config $PKG/etc/i3/config.new
 mv $PKG/etc/i3/config.keycodes $PKG/etc/i3/config.keycodes.new
 
-# Make xterm default terminal
+# Make alacritty default terminal
 sed -i 's/i3-sensible-terminal/alacritty/' $PKG/etc/i3/config.new
 
-# KDM menu entry
-mkdir -p $PKG/usr/share/apps/kdm/sessions
-ln -s /usr/share/xsessions/i3.desktop $PKG/usr/share/apps/kdm/sessions/
+# Fix man page permissions
+chmod 0644 $PKG/usr/man/man1/*
 
 # Install an xinitrc script
 mkdir -p $PKG/etc/X11/xinit
