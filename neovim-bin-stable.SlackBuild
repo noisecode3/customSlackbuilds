@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for clipcat-bin
+# Slackware build script for neovim-bin
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -24,8 +24,8 @@
 
 cd $(dirname $0) ; CWD=$(pwd)
 
-PRGNAM=clipcat-bin
-VERSION=${VERSION:-0.16.6}
+PRGNAM=neovim-bin
+VERSION=${VERSION:-0.9.5}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -60,35 +60,32 @@ fi
 set -e
 
 rm -rf $PKG
-mkdir -p $TMP $PKG/usr/bin $OUTPUT
+mkdir -p $TMP $PKG/usr $OUTPUT
 cd $TMP
-rm -f clipcat-v$VERSION-x86_64-unknown-linux-musl.tar.gz
-preurl="https://github.com/xrelkd/clipcat/releases/download/"
-file="clipcat-v$VERSION-x86_64-unknown-linux-musl.tar.gz"
-wget $preurl"v$VERSION/clipcat-v$VERSION-x86_64-unknown-linux-musl.tar.gz"
-if echo "825294ccc282b040ae66a9af9cbf4d190d56f526472332f7001882f88b839729 $file" | sha256sum -c; then
-  cd $PKG/usr/bin
-  tar xvf $TMP/$file
-  chown -R root:root .
-  mkdir -p ../share/bash-completion/completions/
-  binaries=("clipcat-menu" "clipcat-notify" "clipcatctl" "clipcatd")
-  for bin in "${binaries[@]}"; do
-          $bin completions bash > ../share/bash-completion/completions/$bin
-  done
-  for bin in "${binaries[@]}"; do
-          chmod 644 ../share/bash-completion/completions/$bin
-  done
+rm -rf nvim-linux64 nvim-linux64.tar.gz
+wget https://github.com/neovim/neovim/releases/download/v$VERSION/nvim-linux64.tar.gz
+if echo "44ee395d9b5f8a14be8ec00d3b8ead34e18fe6461e40c9c8c50e6956d643b6ca  nvim-linux64.tar.gz" | sha256sum -c; then
+    tar xvf nvim-linux64.tar.gz
 else
-  echo "download problem"
-  exit 1
+    echo "download problem"
+    exit 1
 fi
+cd $TMP/nvim-linux64
+
+chown -R root:root .
+mv bin man share $PKG/usr/
+mv lib $PKG/usr/lib${LIBDIRSUFFIX}
+chmod +x $PKG/usr/lib${LIBDIRSUFFIX}/nvim/parser/*
 
 find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
   | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
+find $PKG/usr/man -type f -exec gzip -9 {} \;
+for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
+
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
 cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
-mv LICENSE README.md $PKG/usr/doc/$PRGNAM-$VERSION
+
 mkdir -p $PKG/install
 cat <<EOINS >> $PKG/install/slack-desc
 # HOW TO EDIT THIS FILE:
@@ -98,18 +95,28 @@ cat <<EOINS >> $PKG/install/slack-desc
 # You must make exactly 11 lines for the formatting to be correct.  It's also
 # customary to leave one space after the ':' except on otherwise blank lines.
 
-           |-----handy-ruler------------------------------------------------------|
-clipcat-bin: clipcat-bin (Clipcat clipboard manager)
-clipcat-bin:
-clipcat-bin: A clipboard manager written in Rust Programming Language.
-clipcat-bin:
-clipcat-bin:
-clipcat-bin:
-clipcat-bin:
-clipcat-bin:
-clipcat-bin:
-clipcat-bin:
-clipcat-bin:
+          |-----handy-ruler------------------------------------------------------|
+neovim-bin: neovim-bin (Vim fork)
+neovim-bin:
+neovim-bin: Neovim is a fork of the venerable text-editor vim, focused on
+neovim-bin: extensibility and usability. It is not a rewrite but a continuation
+neovim-bin: and extension of Vim. Many clones and derivatives exist, some very
+neovim-bin: clever-but none are Vim. Neovim is built for users who want the good
+neovim-bin: parts of Vim, and more.
+neovim-bin:
+neovim-bin: See a list of differences at :help vim-differences.
+neovim-bin: Homepage: https://neovim.io
+neovim-bin:
+EOINS
+cat <<EOINS >> $PKG/install/doinst.sh
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database -q usr/share/applications >/dev/null 2>&1
+fi
+if [ -e usr/share/icons/hicolor/icon-theme.cache ]; then
+  if [ -x /usr/bin/gtk-update-icon-cache ]; then
+    /usr/bin/gtk-update-icon-cache -f usr/share/icons/hicolor >/dev/null 2>&1
+  fi
+fi
 EOINS
 
 cd $PKG

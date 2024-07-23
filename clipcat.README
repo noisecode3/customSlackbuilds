@@ -13,7 +13,7 @@ Set dbus to false in clipcatd.toml
 [dbus]
 enable = false
 
-In ~/.config/i3/config
+In the file: ~/.config/i3/config
 exec --no-startup-id clipcatd
 
 set $launcher-clipboard-insert clipcat-menu insert
@@ -22,7 +22,9 @@ set $launcher-clipboard-remove clipcat-menu remove
 bindsym $mod+p exec $launcher-clipboard-insert
 bindsym $mod+o exec $launcher-clipboard-remove
 
-In ~/.bash_login
+In the file: ~/.bash_login
+
+#!/bin/bash
 if [ "$TERM" = "alacritty" ]; then
     id=$(clipcatctl list 2>/dev/null | head -1 | awk -F':' '{print $1}')
     if [ -n "$id" ]; then
@@ -33,10 +35,10 @@ if [ "$TERM" = "alacritty" ]; then
             echo "Clipcatctl returned an empty value for id=$id"
         fi
         unset clip
+        unset id
     else
         echo "No id found from clipcatctl list"
     fi
 fi
-
-From slackbuilds.org
+For building you might need
 protobuf3
