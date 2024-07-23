@@ -10,5 +10,8 @@ Optional run-time dependencies:
 * xclip or xsel: for X11 clipboard support;
 * wl-clipboard: for clipboard support on wayland
 
-All basic should be included with slackware-current
-use the checkhealth command, all should be a green OK
+Use the :checkhealth command in Neovim;
+all checks should return a green OK status.
+
+The neovim-bin-nightly.SlackBuild script does not have an automated download
+feature. It requires the nvim-linux64.tar.gz file to be in the same directory.
