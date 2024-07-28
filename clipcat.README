@@ -22,23 +22,5 @@ set $launcher-clipboard-remove clipcat-menu remove
 bindsym $mod+p exec $launcher-clipboard-insert
 bindsym $mod+o exec $launcher-clipboard-remove
 
-In the file: ~/.bash_login
-
-#!/bin/bash
-if [ "$TERM" = "alacritty" ]; then
-    id=$(clipcatctl list 2>/dev/null | head -1 | awk -F':' '{print $1}')
-    if [ -n "$id" ]; then
-        clip=$(clipcatctl get "$id" 2>/dev/null)
-        if [ -n "$clip" ]; then
-            echo -n "$clip" | xsel -ib
-        else
-            echo "Clipcatctl returned an empty value for id=$id"
-        fi
-        unset clip
-        unset id
-    else
-        echo "No id found from clipcatctl list"
-    fi
-fi
 For building you might need
 protobuf3
