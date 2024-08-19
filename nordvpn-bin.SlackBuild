@@ -82,10 +82,10 @@ mkdir -p $TMP $PKG $OUTPUT
 cd $TMP
 
 rm -f nordvpn_${VERSION}_amd64.deb
-wget --trust-server-names https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn_${VERSION}_amd64.deb
+wget --trust-server-names https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn_"${VERSION}"_amd64.deb
 
 # Verify the checksum
-if echo "a42bde37c704c045ddbd68f61406adce0f3d7d32d5f5e61e84465f2aae4975a6  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
+if echo "91c7f3491127f211232dc31155c45e2c2c51886472d8beb46f233f901a9143fd  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
   echo "Checksum verified."
 
   # Extract the data.tar.gz file
