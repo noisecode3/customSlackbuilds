@@ -85,7 +85,7 @@ rm -f nordvpn_${VERSION}_amd64.deb
 wget --trust-server-names https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn_"${VERSION}"_amd64.deb
 
 # Verify the checksum
-if echo "91c7f3491127f211232dc31155c45e2c2c51886472d8beb46f233f901a9143fd  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
+if echo "029f2bd47130cac47da146eb351987e2ecf8b495d73281826f8d84faf60d1336  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
   echo "Checksum verified."
 
   # Extract the data.tar.gz file
