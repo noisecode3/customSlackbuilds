@@ -86,11 +86,36 @@ Important Notes:
     killswitch will prevent any data from being sent over the internet,
     protecting you from potential leaks. Testing for Leaks: After setting
     up the VPN, verify that your DNS is not leaking. Use tools like DNS Leak Test.
+
     Network Monitoring:
-        Use tcpdump to monitor network traffic and ensure all IP addresses are either local or associated with NordVPN servers:
+        Use tcpdump to monitor network traffic and ensure all IP addresses are either
+        local or associated with NordVPN servers:
 
    https://www.dnsleaktest.com/
    See also
    https://support.nordvpn.com/hc/en-us/articles/20094975629585-Change-your-DNS-servers-on-Linux-with-NordVPN
 
-Meshnet will probably not work out of the box, I don't use it.
+Meshnet should work out of the box, I don't use it.
+
+What can be better next time?
+
+Ensure Compatibility with Future Updates: Keep an eye on any updates to NordVPN’s dependencies or
+binary. You might want to implement a script or check to verify if the user has the latest version
+of the required libraries, like libsqlite3.so.
+
+Handle Multi-Arch Systems: While you have a fallback for non-x86_64 systems, it might be worth checking
+how this could affect users running other architectures or considering how to handle arm64 if you want
+broader compatibility.
+
+Improve Error Handling: You can expand error messages a bit. For example, in the checksum mismatch error
+message, you could suggest re-downloading or verifying their internet connection. Also, in nordvpnd_start,
+instead of directly using sleep, you might want to include a timeout loop for waiting on the socket to appear,
+which would make it more robust.
+
+Ensure Permissions and Security: The script ensures that socket directories and files have the correct
+permissions, but adding SELinux or AppArmor support for even stricter security might be worth considering,
+especially for a network-related package like NordVPN.
+
+Testing and Documentation: Make sure to test this on a variety of systems. You could also consider adding
+some additional comments in the script, specifically around any areas users might need to modify if they
+install it in a different environment or under different conditions (for example, using custom paths).
