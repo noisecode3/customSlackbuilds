@@ -22,7 +22,7 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd $(dirname $0) || exit 1 ; CWD=$(pwd)
+cd "$(dirname "$0")" || exit 1 ; CWD=$(pwd)
 
 PRGNAM=nordvpn-bin
 VERSION=${VERSION:-3.19.0}
@@ -41,7 +41,7 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 
-if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
+if [ -n "${PRINT_PACKAGE_NAME}" ]; then
   echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
   exit 0
 fi
@@ -77,29 +77,26 @@ if ! grep -q "^$NORD_GROUP:" /etc/group; then
   bailout
 fi
 
-rm -rf $PKG
-mkdir -p $TMP $PKG $OUTPUT
-cd $TMP
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
 
-rm -f nordvpn_${VERSION}_amd64.deb
-wget --trust-server-names https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn_"${VERSION}"_amd64.deb
+rm -f "nordvpn_${VERSION}_amd64.deb"
+wget --trust-server-names "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn_${VERSION}_amd64.deb"
 
 # Verify the checksum
-if echo "029f2bd47130cac47da146eb351987e2ecf8b495d73281826f8d84faf60d1336  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
+if echo "bec97eba77ae0c4b949a5bd19cc20b53046e46445756d9396bb39c43db586e96  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
   echo "Checksum verified."
 
   # Extract the data.tar.gz file
-  ar p nordvpn_${VERSION}_amd64.deb data.tar.gz > $TMP/data.tar.gz
+  ar p "nordvpn_${VERSION}_amd64.deb" data.tar.gz > "$TMP/data.tar.gz"
 
   # Debugging output to check if the file is created
-  if [ -f $TMP/data.tar.gz ]; then
+  if [ -f "$TMP/data.tar.gz" ]; then
     echo "data.tar.gz extracted successfully."
 
     # Extract the contents of the tar.gz file to the package directory
-    bsdtar -C $PKG -xzf $TMP/data.tar.gz
-
-    # Debugging output to confirm extraction
-    if [ $? -eq 0 ]; then
+    if bsdtar -C "$PKG" -xzf "$TMP/data.tar.gz"; then
       echo "Extraction completed successfully."
     else
       echo "Extraction failed."
@@ -114,14 +111,33 @@ else
   exit 1
 fi
 
-cd $PKG
+cd "$PKG"
+mkdir usr/lib64
+mv usr/lib/nordvpn usr/lib64/
 rm -fR etc usr/lib
 
-# Move man where the man likes
-mv usr/share/man usr/
-rm -rf $PKG/usr/share/doc
+cd usr/lib64
+# To make this properly work we link to those, it will look
+# in usr/lib64/ anyway to its better to link to what it got
+# libsqlite3.so is in slackware
 
-mkdir -p $PKG/etc/rc.d
+ln -s nordvpn/libmoosenordvpnapp.so libmoosenordvpnapp.so
+ln -s nordvpn/libmooseworker.so libmooseworker.so
+ln -s nordvpn/libnorddrop.so libnorddrop.so
+ln -s nordvpn/libtelio.so libtelio.so
+
+# Binary file we can include in $PATH when we start nordvpn
+# lets check more info about it
+# nordfileshare
+# norduserd
+# openvpn
+
+# Move man where the man likes
+cd "$PKG"
+mv usr/share/man usr/
+rm -rf "$PKG/usr/share/doc"
+
+mkdir -p "$PKG/etc/rc.d"
 
 rcfile=$(cat <<'EOINS'
 #!/usr/bin/env bash
@@ -260,15 +276,17 @@ esac
 EOINS
 )
 
-echo "$rcfile" > $PKG/etc/rc.d/rc.nordvpn
-chown root:root  $PKG/etc/rc.d/rc.nordvpn
-chmod 0755       $PKG/etc/rc.d/rc.nordvpn
+echo "$rcfile" > "$PKG/etc/rc.d/rc.nordvpn"
+chown root:root  "$PKG/etc/rc.d/rc.nordvpn"
+chmod 0755       "$PKG/etc/rc.d/rc.nordvpn"
 
-mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
-cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+mv "$PKG/usr/share/licenses/nordvpn/"*  "$PKG/usr/doc/$PRGNAM-$VERSION"
+rm -fr "$PKG/usr/share/licenses"
+cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
 
-mkdir -p $PKG/install
-cat <<EOINS > $PKG/install/slack-desc
+mkdir -p "$PKG/install"
+cat <<EOINS > "$PKG/install/slack-desc"
 # HOW TO EDIT THIS FILE:
 # The "handy ruler" below makes it easier to edit a package description.
 # Line up the first '|' above the ':' following the base package name, and
@@ -290,7 +308,7 @@ nordvpn-bin: https://www.nordvpn.com/
 nordvpn-bin:
 EOINS
 
-cat <<EOINS > $PKG/install/doinst.sh
+cat <<EOINS > "$PKG/install/doinst.sh"
 if [ -x /usr/bin/update-desktop-database ]; then
   /usr/bin/update-desktop-database -q usr/share/applications >/dev/null 2>&1
 fi
@@ -310,5 +328,5 @@ if [ -x /etc/rc.d/rc.nordvpn ]; then
 fi
 EOINS
 
-cd $PKG
-/sbin/makepkg -l y -p -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE
+cd "$PKG"
+/sbin/makepkg -l y -p -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
