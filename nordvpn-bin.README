@@ -41,44 +41,6 @@ In case of any issue, you need to reinstall following packages:
 wireguard-linux-compat
 wireguard-tools
 
-Then you can switch to NordLynx with the following command:
-'nordvpn set technology NordLynx'
-
-And connect using:
-'nordvpn c'
-
-You can always switch back to OpenVPN using this command:
-'nordvpn set technology OpenVPN'
-
-Setting Up NordVPN with NetworkManager
-
-To set up NordVPN to automatically connect with NetworkManager and enable
-the killswitch, follow these steps:
-Create the Dispatcher Script
-  Create a script file in the /etc/NetworkManager/dispatcher.d/ directory.
-  You will need root permissions to do this. Name the file 99-custom-script.
-
-
-#!/bin/bash
-# This script automatically enables the NordVPN killswitch and connects to a
-# server in Sweden when the specified network interface comes up.
-# Replace 'eth0' with your network interface and 'Sweden' with your desired country.
-
-INTERFACE=$1
-STATUS=$2
-
-case $STATUS in
-    up)
-        if [ "$INTERFACE" = "eth0" ]; then
-            sleep 1
-            su -c "nordvpn set killswitch on; nordvpn c Sweden"
-        fi
-        ;;
-    *)
-        ;;
-esac
-
-
 Important Notes:
 
     Killswitch: Enabling the killswitch is crucial to ensure your internet
@@ -95,8 +57,6 @@ Important Notes:
    See also
    https://support.nordvpn.com/hc/en-us/articles/20094975629585-Change-your-DNS-servers-on-Linux-with-NordVPN
 
-Meshnet should work out of the box, I don't use it.
-
 What can be better next time?
 
 Ensure Compatibility with Future Updates: Keep an eye on any updates to NordVPN’s dependencies or
@@ -111,11 +71,3 @@ Improve Error Handling: You can expand error messages a bit. For example, in the
 message, you could suggest re-downloading or verifying their internet connection. Also, in nordvpnd_start,
 instead of directly using sleep, you might want to include a timeout loop for waiting on the socket to appear,
 which would make it more robust.
-
-Ensure Permissions and Security: The script ensures that socket directories and files have the correct
-permissions, but adding SELinux or AppArmor support for even stricter security might be worth considering,
-especially for a network-related package like NordVPN.
-
-Testing and Documentation: Make sure to test this on a variety of systems. You could also consider adding
-some additional comments in the script, specifically around any areas users might need to modify if they
-install it in a different environment or under different conditions (for example, using custom paths).

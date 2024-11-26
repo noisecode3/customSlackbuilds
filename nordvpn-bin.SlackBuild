@@ -25,7 +25,7 @@
 cd "$(dirname "$0")" || exit 1 ; CWD=$(pwd)
 
 PRGNAM=nordvpn-bin
-VERSION=${VERSION:-3.19.0}
+VERSION=${VERSION:-3.19.1}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -76,10 +76,10 @@ mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 
 rm -f "nordvpn_${VERSION}_amd64.deb"
-wget --trust-server-names "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn_${VERSION}_amd64.deb"
+wget --trust-server-names "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/nordvpn_${VERSION}_amd64.deb"
 
 # Verify the checksum
-if echo "bec97eba77ae0c4b949a5bd19cc20b53046e46445756d9396bb39c43db586e96  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
+if echo "49911163674b3782a1c1ab59b4801ceb7423fe2c85dd4f9855fb440543584569  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
   echo "Checksum verified."
 
   # Extract the data.tar.gz file
@@ -123,8 +123,8 @@ ln -s nordvpn/libtelio.so libtelio.so
 # Binary filed we can include in $PATH when we start nordvpn
 # We let the user have access to thoes, we see how its done
 # on https://github.com/NordSecurity/nordvpn-linux
-ln -sf /usr/lib64/nordvpn/nordfileshare "$PKG/usr/bin/nordfileshare"
-ln -sf /usr/lib64/nordvpn/norduserd "$PKG/usr/bin/norduserd"
+# ln -sf /usr/lib64/nordvpn/nordfileshare "$PKG/usr/bin/nordfileshare"
+# ln -sf /usr/lib64/nordvpn/norduserd "$PKG/usr/bin/norduserd"
 
 # Move man where the man likes
 cd "$PKG"
