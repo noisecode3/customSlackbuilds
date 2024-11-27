@@ -25,7 +25,7 @@
 cd "$(dirname "$0")" || exit 1 ; CWD=$(pwd)
 
 PRGNAM=nordvpn-bin
-VERSION=${VERSION:-3.19.1}
+VERSION=${VERSION:-3.18.5}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -79,7 +79,7 @@ rm -f "nordvpn_${VERSION}_amd64.deb"
 wget --trust-server-names "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/nordvpn_${VERSION}_amd64.deb"
 
 # Verify the checksum
-if echo "49911163674b3782a1c1ab59b4801ceb7423fe2c85dd4f9855fb440543584569  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
+if echo "029f2bd47130cac47da146eb351987e2ecf8b495d73281826f8d84faf60d1336  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
   echo "Checksum verified."
 
   # Extract the data.tar.gz file

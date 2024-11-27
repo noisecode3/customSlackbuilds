@@ -25,7 +25,7 @@
 cd $(dirname $0) ; CWD=$(pwd)
 
 PRGNAM=clipcat-bin
-VERSION=${VERSION:-0.16.6}
+VERSION=${VERSION:-0.18.3}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -66,14 +66,14 @@ rm -f clipcat-v$VERSION-x86_64-unknown-linux-musl.tar.gz
 preurl="https://github.com/xrelkd/clipcat/releases/download/"
 file="clipcat-v$VERSION-x86_64-unknown-linux-musl.tar.gz"
 wget $preurl"v$VERSION/clipcat-v$VERSION-x86_64-unknown-linux-musl.tar.gz"
-if echo "825294ccc282b040ae66a9af9cbf4d190d56f526472332f7001882f88b839729 $file" | sha256sum -c; then
+if echo "396d204fa7026a0659bcea836a4c9c3c25823df59bc35fb18f363c58d6b54faf $file" | sha256sum -c; then
   cd $PKG/usr/bin
   tar xvf $TMP/$file
   chown -R root:root .
   mkdir -p ../share/bash-completion/completions/
   binaries=("clipcat-menu" "clipcat-notify" "clipcatctl" "clipcatd")
   for bin in "${binaries[@]}"; do
-          $bin completions bash > ../share/bash-completion/completions/$bin
+          ./$bin completions bash > ../share/bash-completion/completions/$bin
   done
   for bin in "${binaries[@]}"; do
           chmod 644 ../share/bash-completion/completions/$bin
