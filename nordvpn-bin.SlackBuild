@@ -25,7 +25,7 @@
 cd "$(dirname "$0")" || exit 1 ; CWD=$(pwd)
 
 PRGNAM=nordvpn-bin
-VERSION=${VERSION:-3.18.5}
+VERSION=${VERSION:-3.19.2}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -79,7 +79,7 @@ rm -f "nordvpn_${VERSION}_amd64.deb"
 wget --trust-server-names "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/nordvpn_${VERSION}_amd64.deb"
 
 # Verify the checksum
-if echo "029f2bd47130cac47da146eb351987e2ecf8b495d73281826f8d84faf60d1336  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
+if echo "57c48cf7543e0c97a5ac4122a5c9f0237040be9badefd535dd4f74f2eead8ccc  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
   echo "Checksum verified."
 
   # Extract the data.tar.gz file
@@ -108,30 +108,22 @@ fi
 cd "$PKG"
 mkdir usr/lib64
 mv usr/lib/nordvpn usr/lib64/
-rm -fR etc usr/lib
+chmod 755 usr/lib64/nordvpn/libsqlite3.so
+chmod 755 usr/lib64/nordvpn/libtelio.so
 
-cd usr/lib64
-# To make this properly work we link to those, it will look
-# in usr/lib64/ anyway to its better to link to what it got
-# libsqlite3.so is in slackware
-#rm -f nordvpn/libsqlite3.so
+rm -fr etc usr/lib
+mv usr/bin/nordvpn usr/lib64/nordvpn/
 
-
-# Define the list of target files and their corresponding symlinks
-declare -A symlinks=(
-    ["nordvpn/libmoosenordvpnapp.so"]="libmoosenordvpnapp.so"
-    ["nordvpn/libmooseworker.so"]="libmooseworker.so"
-    ["nordvpn/libnorddrop.so"]="libnorddrop.so"
-    ["nordvpn/libtelio.so"]="libtelio.so"
+wrapper=$(cat <<'EOINS'
+#!/bin/bash
+export PATH=/usr/lib64/nordvpn:/sbin:/bin:/usr/sbin:/usr/bin
+export LD_LIBRARY_PATH=/usr/lib64/nordvpn:/lib64/:/usr/lib64
+exec /usr/lib64/nordvpn/nordvpn "$@"
+EOINS
 )
-
-# Loop through each target-symlink pair, create if exits
-for target in "${!symlinks[@]}"; do
-    symlink="${symlinks[$target]}"
-    if [[ -e "$target" ]]; then
-        ln -s "$target" "$symlink"
-    fi
-done
+echo "$wrapper" > "$PKG/usr/bin/nordvpn"
+chown root:root  "$PKG/usr/bin/nordvpn"
+chmod 0755       "$PKG/usr/bin/nordvpn"
 
 # Move man where the man likes
 cd "$PKG"
@@ -147,46 +139,71 @@ rcfile=$(cat <<'EOINS'
 # Strong encryption and no-log policy with 3000+ servers in 60+ countries.
 ### END INIT INFO
 
-PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+# Reset PATH to a safe and sane default paths
+# /usr/lib64/nordvpn have both binary and lib files
+export PATH=/usr/lib64/nordvpn:/sbin:/bin:/usr/sbin:/usr/bin
+export LD_LIBRARY_PATH=/usr/lib64/nordvpn:/lib64/:/usr/lib64
 
 BASE=nordvpn
-
-DAEMON=/usr/sbin/${BASE}d
+DAEMON="/usr/sbin/${BASE}d"
 PID=/var/run/$BASE.pid
 SOCK=/run/$BASE/${BASE}d.sock
 SOCKDIR=/run/$BASE
 
+#
+# Function to let nordvpn users run the nordvpn command
+#
 nordvpnd_give_socket() {
   chown root:$BASE $SOCK
 }
 
+#
+# Function to take socket ownership back to only root user
+#
 nordvpnd_take_socket() {
   chown root:root $SOCK
 }
 
+#
+# Function to setup the socket for the users
+#
 create_socket_dir() {
   if [[ -d $SOCKDIR ]]; then
     return
   fi
   mkdir -m 0770 $SOCKDIR
+  nordvpnd_give_socket
 }
 
-checkuser() {
-    status=0
-    for u in $(who | awk '{print $1}' | sort | uniq)
-    do
-          if [ "$u" == "$1" ]; then
-                return 0
-	  fi
-    done
-    return 1
+#
+# Function to ensure the script is run as root
+#
+check_root() {
+  if [ "$(id -u)" -ne 0 ]; then
+    echo "This script must be run as root."
+    exit 1
+  fi
 }
+
+#
+# Function to check for existing instances of the daemon
+#
+check_running_instance() {
+  if pidof nordvpnd >/dev/null 2>&1; then
+    echo "NordVPN daemon is already running."
+    exit 1
+  fi
+}
+
 #
 # Function that starts the daemon
 #
 nordvpnd_start()
 {
-  checkuser
+  # this might be to much, no other user should run this ever
+  # and never 2 processes with different users
+  check_root
+  check_running_instance
   create_socket_dir
   rm -rf $SOCK
   if [ -s $PID ]; then
@@ -197,10 +214,9 @@ nordvpnd_start()
   if [ -x $DAEMON ]; then
     echo "Starting $BASE"
     sleep 1
-    # $DAEMON start-stop-daemon --start --quiet -g "nordvpn" --pidfile $PID --exec $DAEMON
-    $DAEMON > /dev/null &
+    $DAEMON > /dev/null & # we can maybe use daemon logging from here
     pidof $DAEMON > $PID
-    sleep 10
+    sleep 5 # this was set on 10 before, that is to long? This is a test for now
     if [ -S "$SOCK" ]; then
       echo "$BASE has been started."
     else
@@ -217,7 +233,7 @@ nordvpnd_stop()
   if [ -s $PID ]; then
     echo "Stopping $BASE"
     sleep 1
-    kill $(cat $PID)
+    kill "$(cat "$PID")"
     rm -rf $PID $SOCK
     sleep 1
     echo "$BASE has been stopped."
@@ -273,10 +289,8 @@ case "$1" in
     exit 1
     ;;
 esac
-
 EOINS
 )
-
 echo "$rcfile" > "$PKG/etc/rc.d/rc.nordvpn.new"
 chown root:root  "$PKG/etc/rc.d/rc.nordvpn.new"
 chmod 0755       "$PKG/etc/rc.d/rc.nordvpn.new"
@@ -350,10 +364,10 @@ preserve_perms() {
 
 preserve_perms etc/rc.d/rc.nordvpn.new
 
-echo "#################################"
+echo "##################################"
 echo "Run /etc/rc.d/rc.nordvpn restart"
-echo "Or reboot now!"
-echo "#################################"
+echo "Or reboot now! If you just updated"
+echo "##################################"
 EOINS
 )
 echo "$doinst" > "$PKG/install/doinst.sh"
