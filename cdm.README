@@ -1,0 +1,4 @@
+CDM is a minimalistic, yet full-featured replacement for display managers like SLiM, SDDM and GDM
+that provides a fast, dialog-based login system without the overhead of the X Window System.
+Written in pure bash, CDM has almost no dependencies, yet supports multiple users/sessions
+and can start virtually any desktop environment or window manager.

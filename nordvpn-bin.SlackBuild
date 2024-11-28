@@ -115,10 +115,21 @@ cd usr/lib64
 # in usr/lib64/ anyway to its better to link to what it got
 # libsqlite3.so is in slackware
 
-ln -s nordvpn/libmoosenordvpnapp.so libmoosenordvpnapp.so
-ln -s nordvpn/libmooseworker.so libmooseworker.so
-ln -s nordvpn/libnorddrop.so libnorddrop.so
-ln -s nordvpn/libtelio.so libtelio.so
+# Define the list of target files and their corresponding symlinks
+declare -A symlinks=(
+    ["nordvpn/libmoosenordvpnapp.so"]="libmoosenordvpnapp.so"
+    ["nordvpn/libmooseworker.so"]="libmooseworker.so"
+    ["nordvpn/libnorddrop.so"]="libnorddrop.so"
+    ["nordvpn/libtelio.so"]="libtelio.so"
+)
+
+# Loop through each target-symlink pair, create if exits
+for target in "${!symlinks[@]}"; do
+    symlink="${symlinks[$target]}"
+    if [[ -e "$target" ]]; then
+        ln -s "$target" "$symlink"
+    fi
+done
 
 # Binary filed we can include in $PATH when we start nordvpn
 # We let the user have access to thoes, we see how its done
