@@ -173,8 +173,6 @@ create_socket_dir() {
     return
   fi
   mkdir -m 0770 $SOCKDIR
-  chown root:$BASE $SOCKDIR
-  nordvpnd_give_socket
 }
 
 #
@@ -207,6 +205,8 @@ nordvpnd_start()
   check_root
   check_running_instance
   create_socket_dir
+  chown root:$BASE $SOCKDIR
+  nordvpnd_give_socket
   rm -rf $SOCK
   if [ -s $PID ]; then
     echo "$BASE is already running: $(cat $PID)"
@@ -220,7 +220,7 @@ nordvpnd_start()
     chmod 640 $LOGFILE
     $DAEMON >> $LOGFILE 2>&1 &
     pidof $DAEMON > $PID
-    sleep 5 # this was set on 10 before, that is to long? This is a test for now
+    sleep 3
     if [ -S "$SOCK" ]; then
       echo "$BASE has been started."
     else
@@ -252,7 +252,13 @@ nordvpnd_stop()
 nordvpnd_restart()
 {
   nordvpnd_stop
-  sleep 1
+  if [ -s $PID ]; then
+    echo "Waiting for $BASE to stop..."
+    while kill -0 "$(cat "$PID")" 2>/dev/null; do
+      sleep 1
+    done
+  fi
+  echo "$BASE has stopped. Restarting now."
   nordvpnd_start
 }
 
