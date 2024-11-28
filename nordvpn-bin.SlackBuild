@@ -147,6 +147,7 @@ export LD_LIBRARY_PATH=/usr/lib64/nordvpn:/lib64/:/usr/lib64
 BASE=nordvpn
 DAEMON="/usr/sbin/${BASE}d"
 PID=/var/run/$BASE.pid
+LOGFILE=/var/log/nordvpn.log
 SOCK=/run/$BASE/${BASE}d.sock
 SOCKDIR=/run/$BASE
 
@@ -172,6 +173,7 @@ create_socket_dir() {
     return
   fi
   mkdir -m 0770 $SOCKDIR
+  chown root:$BASE $SOCKDIR
   nordvpnd_give_socket
 }
 
@@ -214,7 +216,9 @@ nordvpnd_start()
   if [ -x $DAEMON ]; then
     echo "Starting $BASE"
     sleep 1
-    $DAEMON > /dev/null & # we can maybe use daemon logging from here
+    touch $LOGFILE
+    chmod 640 $LOGFILE
+    $DAEMON >> $LOGFILE 2>&1 &
     pidof $DAEMON > $PID
     sleep 5 # this was set on 10 before, that is to long? This is a test for now
     if [ -S "$SOCK" ]; then
