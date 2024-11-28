@@ -114,6 +114,8 @@ cd usr/lib64
 # To make this properly work we link to those, it will look
 # in usr/lib64/ anyway to its better to link to what it got
 # libsqlite3.so is in slackware
+#rm -f nordvpn/libsqlite3.so
+
 
 # Define the list of target files and their corresponding symlinks
 declare -A symlinks=(
@@ -131,12 +133,6 @@ for target in "${!symlinks[@]}"; do
     fi
 done
 
-# Binary filed we can include in $PATH when we start nordvpn
-# We let the user have access to thoes, we see how its done
-# on https://github.com/NordSecurity/nordvpn-linux
-# ln -sf /usr/lib64/nordvpn/nordfileshare "$PKG/usr/bin/nordfileshare"
-# ln -sf /usr/lib64/nordvpn/norduserd "$PKG/usr/bin/norduserd"
-
 # Move man where the man likes
 cd "$PKG"
 mv usr/share/man usr/
@@ -151,7 +147,7 @@ rcfile=$(cat <<'EOINS'
 # Strong encryption and no-log policy with 3000+ servers in 60+ countries.
 ### END INIT INFO
 
-PATH=/usr/lib64/nordvpn:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
 BASE=nordvpn
 

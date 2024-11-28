@@ -41,8 +41,21 @@ In case of any issue, you need to reinstall following packages:
 wireguard-linux-compat
 wireguard-tools
 
-Important Notes:
 
+Important Notes:
+    As of  NordVPN 3.19.0 wont work killswitch or configuring DNS wont work
+    and/or a combination of those got really buggy
+
+    Read: https://nordvpn.com/blog/private-dns/
+    and make sure you set autoconnect like this and no other settings:
+    # nordvpn set autoconnect on sweden
+    and don't use anything extra in NetworkManager
+    just do a dnsleaktest
+    and use tcpdump to check that the https to 104.19.159.190
+    and that there is only you're local and nordvpn domain/ip in there
+    you might get this https://en.wikipedia.org/wiki/Mcast.net should be normal
+
+    What worked for 3.18.5 and down
     Killswitch: Enabling the killswitch is crucial to ensure your internet
     connection is secure and private. If the VPN fails to connect, the
     killswitch will prevent any data from being sent over the internet,
@@ -57,15 +70,7 @@ Important Notes:
    See also
    https://support.nordvpn.com/hc/en-us/articles/20094975629585-Change-your-DNS-servers-on-Linux-with-NordVPN
 
-What can be better next time?
-
-Ensure Compatibility with Future Updates: Keep an eye on any updates to NordVPN’s dependencies or
-binary. You might want to implement a script or check to verify if the user has the latest version
-of the required libraries, like libsqlite3.so.
-
-Handle Multi-Arch Systems: While you have a fallback for non-x86_64 systems, it might be worth checking
-how this could affect users running other architectures or considering how to handle arm64 if you want
-broader compatibility.
+What can be better next time for the package?
 
 Improve Error Handling: You can expand error messages a bit. For example, in the checksum mismatch error
 message, you could suggest re-downloading or verifying their internet connection. Also, in nordvpnd_start,
