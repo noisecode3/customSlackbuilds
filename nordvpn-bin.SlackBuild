@@ -200,13 +200,10 @@ check_running_instance() {
 #
 nordvpnd_start()
 {
-  # this might be to much, no other user should run this ever
-  # and never 2 processes with different users
   check_root
   check_running_instance
   create_socket_dir
   chown root:$BASE $SOCKDIR
-  nordvpnd_give_socket
   rm -rf $SOCK
   if [ -s $PID ]; then
     echo "$BASE is already running: $(cat $PID)"
@@ -220,11 +217,18 @@ nordvpnd_start()
     chmod 640 $LOGFILE
     $DAEMON >> $LOGFILE 2>&1 &
     pidof $DAEMON > $PID
-    sleep 3
-    if [ -S "$SOCK" ]; then
-      echo "$BASE has been started."
-    else
-      echo "$BASE failed to start. Please restart the daemon."
+
+    for i in {1..10}; do
+      if [ -S "$SOCK" ]; then
+        nordvpnd_give_socket
+        echo "$BASE has been started."
+        break
+      fi
+      sleep 1
+    done
+
+    if [ ! -S "$SOCK" ]; then
+      echo "$BASE failed to start the daemon."
     fi
   fi
 }
