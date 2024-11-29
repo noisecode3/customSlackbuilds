@@ -238,6 +238,7 @@ nordvpnd_start()
 #
 nordvpnd_stop()
 {
+  check_root
   if [ -s $PID ]; then
     echo "Stopping $BASE"
     sleep 1
