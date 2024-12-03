@@ -114,7 +114,7 @@ chmod 755 usr/lib64/nordvpn/libsqlite3.so
 chmod 755 usr/lib64/nordvpn/libtelio.so
 
 # Helper programs not useful to run outside the app
-mkdir usr/libexec/nordvpn
+mkdir -p usr/libexec/nordvpn
 mv usr/lib64/nordvpn/nordfileshare usr/libexec/nordvpn/
 mv usr/lib64/nordvpn/norduserd usr/libexec/nordvpn/
 mv usr/lib64/nordvpn/openvpn usr/libexec/nordvpn/
