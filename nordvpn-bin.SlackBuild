@@ -205,7 +205,7 @@ nordvpnd_start()
 
   if [ -x $DAEMON ]; then
     echo "Starting $BASE"
-    if [ $1 = "LOG" ]; then
+    if [ "$1" = "LOG" ]; then
       touch $LOGFILE
       chmod 640 $LOGFILE
       $DAEMON >> $LOGFILE 2>&1 &
