@@ -126,7 +126,7 @@ wrapper=$(cat <<'EOINS'
 #!/bin/bash
 export PATH=/usr/libexec/nordvpn:/sbin:/bin:/usr/sbin:/usr/bin
 export LD_LIBRARY_PATH=/usr/lib64/nordvpn:/lib64/:/usr/lib64
-exec /usr/lib64/nordvpn/nordvpn "$@"
+exec /usr/libexec/nordvpn/nordvpn "$@"
 EOINS
 )
 echo "$wrapper" > "$PKG/usr/bin/nordvpn"
