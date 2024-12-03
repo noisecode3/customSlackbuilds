@@ -106,17 +106,25 @@ else
 fi
 
 cd "$PKG"
+# Libs for 64bit only here
 mkdir usr/lib64
 mv usr/lib/nordvpn usr/lib64/
+rm -fr etc usr/lib # What's left is unneeded for Slackware
 chmod 755 usr/lib64/nordvpn/libsqlite3.so
 chmod 755 usr/lib64/nordvpn/libtelio.so
 
-rm -fr etc usr/lib
-mv usr/bin/nordvpn usr/lib64/nordvpn/
+# Helper programs not useful to run outside the app
+mkdir usr/libexec/nordvpn
+mv usr/lib64/nordvpn/nordfileshare usr/libexec/nordvpn/
+mv usr/lib64/nordvpn/norduserd usr/libexec/nordvpn/
+mv usr/lib64/nordvpn/openvpn usr/libexec/nordvpn/
+
+# Used with wrapper
+mv usr/bin/nordvpn usr/libexec/nordvpn/
 
 wrapper=$(cat <<'EOINS'
 #!/bin/bash
-export PATH=/usr/lib64/nordvpn:/sbin:/bin:/usr/sbin:/usr/bin
+export PATH=/usr/libexec/nordvpn:/sbin:/bin:/usr/sbin:/usr/bin
 export LD_LIBRARY_PATH=/usr/lib64/nordvpn:/lib64/:/usr/lib64
 exec /usr/lib64/nordvpn/nordvpn "$@"
 EOINS
@@ -125,7 +133,7 @@ echo "$wrapper" > "$PKG/usr/bin/nordvpn"
 chown root:root  "$PKG/usr/bin/nordvpn"
 chmod 0755       "$PKG/usr/bin/nordvpn"
 
-# Move man where the man likes
+# Move man where the man should be on Slackware
 cd "$PKG"
 mv usr/share/man usr/
 rm -rf "$PKG/usr/share/doc"
@@ -140,8 +148,7 @@ rcfile=$(cat <<'EOINS'
 ### END INIT INFO
 
 # Reset PATH to a safe and sane default paths
-# /usr/lib64/nordvpn have both binary and lib files
-export PATH=/usr/lib64/nordvpn:/sbin:/bin:/usr/sbin:/usr/bin
+export PATH=/usr/libexec/nordvpn:/sbin:/bin:/usr/sbin:/usr/bin
 export LD_LIBRARY_PATH=/usr/lib64/nordvpn:/lib64/:/usr/lib64
 
 BASE=nordvpn
@@ -150,20 +157,6 @@ PID=/var/run/$BASE.pid
 LOGFILE=/var/log/nordvpn.log
 SOCK=/run/$BASE/${BASE}d.sock
 SOCKDIR=/run/$BASE
-
-#
-# Function to let nordvpn users run the nordvpn command
-#
-nordvpnd_give_socket() {
-  chown root:$BASE $SOCK
-}
-
-#
-# Function to take socket ownership back to only root user
-#
-nordvpnd_take_socket() {
-  chown root:root $SOCK
-}
 
 #
 # Function to setup the socket for the users
@@ -212,15 +205,18 @@ nordvpnd_start()
 
   if [ -x $DAEMON ]; then
     echo "Starting $BASE"
-    sleep 1
-    touch $LOGFILE
-    chmod 640 $LOGFILE
-    $DAEMON >> $LOGFILE 2>&1 &
+    if [ $1 = "LOG" ]; then
+      touch $LOGFILE
+      chmod 640 $LOGFILE
+      $DAEMON >> $LOGFILE 2>&1 &
+    else
+      $DAEMON > /dev/null 2>&1 &
+    fi
     pidof $DAEMON > $PID
 
     for i in {1..10}; do
       if [ -S "$SOCK" ]; then
-        nordvpnd_give_socket
+        chown root:$BASE $SOCK
         echo "$BASE has been started."
         break
       fi
@@ -293,14 +289,11 @@ case "$1" in
   status)
     nordvpnd_status
     ;;
-  give_socket)
-    nordvpnd_give_socket
-    ;;
-  take_socket)
-    nordvpnd_take_socket
+  start_with_logging)
+    nordvpnd_start "LOG"
     ;;
   *)
-    echo $"Usage: $0 {start|stop|restart|status|give_socket|take_socket}"
+    echo $"Usage: $0 {start|stop|restart|status|start_with_logging}"
     exit 1
     ;;
 esac
