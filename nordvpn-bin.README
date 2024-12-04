@@ -11,17 +11,6 @@ You can create this group like this (Run these as root):
     usermod -aG nordvpn $USER (Replace $USER with your username)
 Then log out of the system and login again.
 
-Allowing normal users to use the nordvpn command by adding them to
-the nordvpn group can introduce security risks. It's generally safer
-to restrict this capability to root or highly trusted administrative users.
-If you must allow normal users to access VPN functionalities for first time
-login with secure web browser like Firefox and two-factor authentication (2FA)
-On a secure network
-
-run command:
-/etc/rc.d/rc.nordvpn give_socket
-then /etc/rc.d/rc.nordvpn take_socket
-Do not let a home user control the vpn for general use
 
 The following can be used to start/stop NordVPN automatically:
 /etc/rc.d/rc.local
@@ -41,38 +30,22 @@ In case of any issue, you need to reinstall following packages:
 wireguard-linux-compat
 wireguard-tools
 
+setup:
+    nordvpn login --token "tokencode"
+    nordvpn set autoconnect on sweden
+    nordvpn set killswitch on
+
+You don't need to setup anything extra in NetworkManager
 
 Important Notes:
-    As of  NordVPN 3.19.0 wont work killswitch or configuring DNS wont work
-    and/or a combination of those got really buggy
-
     Read: https://nordvpn.com/blog/private-dns/
-    and make sure you set autoconnect like this and no other settings:
-    # nordvpn set autoconnect on sweden
-    and don't use anything extra in NetworkManager
-    just do a dnsleaktest
-    and use tcpdump to check that the https to 104.19.159.190
+    https://www.dnsleaktest.com/
+    and use tcpdump to check the https to 104.19.159.190
     and that there is only you're local and nordvpn domain/ip in there
     you might get this https://en.wikipedia.org/wiki/Mcast.net should be normal
 
-    What worked for 3.18.5 and down
     Killswitch: Enabling the killswitch is crucial to ensure your internet
     connection is secure and private. If the VPN fails to connect, the
     killswitch will prevent any data from being sent over the internet,
     protecting you from potential leaks. Testing for Leaks: After setting
     up the VPN, verify that your DNS is not leaking. Use tools like DNS Leak Test.
-
-    Network Monitoring:
-        Use tcpdump to monitor network traffic and ensure all IP addresses are either
-        local or associated with NordVPN servers:
-
-   https://www.dnsleaktest.com/
-   See also
-   https://support.nordvpn.com/hc/en-us/articles/20094975629585-Change-your-DNS-servers-on-Linux-with-NordVPN
-
-What can be better next time for the package?
-
-Improve Error Handling: You can expand error messages a bit. For example, in the checksum mismatch error
-message, you could suggest re-downloading or verifying their internet connection. Also, in nordvpnd_start,
-instead of directly using sleep, you might want to include a timeout loop for waiting on the socket to appear,
-which would make it more robust.
