@@ -1,0 +1,173 @@
+#!/bin/bash
+
+#!/bin/bash
+
+# Slackware build script for template
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+cd "$(dirname "$0")" ; CWD=$(pwd)
+
+PRGNAM=template
+VERSION=${VERSION:-git} # or tarball source or binary, you would need to set
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+
+if [ -z "$ARCH" ]; then
+  case "$( uname -m )" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+       *) ARCH=$( uname -m ) ;;
+  esac
+fi
+
+# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
+# the name of the created package would be, and then exit. This information
+# could be useful to other scripts.
+if [ -n "${PRINT_PACKAGE_NAME}" ]; then
+  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
+  exit 0
+fi
+
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "i586" ]; then
+  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "i686" ]; then
+  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -fPIC"
+  LIBDIRSUFFIX="64"
+else
+  SLKCFLAGS="-O2"
+  LIBDIRSUFFIX=""
+fi
+
+set -e
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM"
+# work for setting both tag and branch
+if [ "$VERSION" != "git" ]; then
+  git clone --depth 1 -b "$VERSION" https://github.com/noisecode3/template
+  cd "$PRGNAM"
+else
+  git clone https://github.com/noisecode3/template
+  cd "$PRGNAM"
+  VERSION=$(git describe --tags)
+  VERSION=${VERSION::-10}
+  VERSION=$(echo "$VERSION" | tr '-' . )
+fi
+chown -R root:root .
+find -L . \
+ \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
+  -o -perm 511 \) -exec chmod 755 {} \; -o \
+ \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
+  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+  
+CFLAGS="$SLKCFLAGS" \
+meson setup \
+  --prefix /usr \
+  --libdir /usr/lib$LIBDIRSUFFIX \
+  --mandir /usr/man \
+  --sysconfdir /etc \
+  --localstatedir /var \
+  -Dmans=true \
+  build
+CFLAGS="$SLKCFLAGS" ninja -C build
+DESTDIR=$PKG ninja -C build install
+
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
+  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+
+config=$(cat <<'EOINS'
+some file text
+var1=black
+var2=blue
+
+EOINS
+)
+FILE_NAME="$PKG/etc/prgram/config"
+echo "$config" >> "$FILE_NAME"
+chmod 0755 "$FILE_NAME"
+
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a LICENSE README "$PKG/usr/doc/$PRGNAM-$VERSION"
+
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
+  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+
+find "$PKG/usr/man" -type f -exec gzip -9 {} \;
+while IFS= read -r i; do
+    ln -s "$(readlink "$i").gz" "$i.gz"
+    rm "$i"
+done < <(find "$PKG/usr/man" -type l)
+
+#find "$PKG" -depth -type d -empty -delete || true
+
+cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
+
+mkdir -p "$PKG/install"
+
+# This type of file can conflict with $ from this script, it's best for text 
+BSPACE=$(printf "%${#PRGNAM}s")
+cat <<EOINS >> "$PKG/install/slack-desc"
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+$BSPACE|-----handy-ruler------------------------------------------------------|
+$PRGNAM: $PRGNAM (short text)
+$PRGNAM:
+$PRGNAM: long text
+$PRGNAM:
+$PRGNAM:
+$PRGNAM:
+$PRGNAM:
+$PRGNAM:
+$PRGNAM:
+$PRGNAM:
+$PRGNAM:
+EOINS
+
+# This type of file good for files with default permissions
+doinst=$(cat <<'EOINS'
+config() {
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database -q usr/share/applications >/dev/null 2>&1
+fi
+EOINS
+)
+echo "$doinst" >> "$PKG/install/doinst.sh"
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
