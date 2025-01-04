@@ -1,0 +1,8 @@
+dictd (dictionary server)
+
+DICT is a dictionary network protocol created by the DICT Development Group in
+1997, described by RFC 2229.Its goal is to surpass the Webster protocol to allow
+clients to access a variety of dictionaries via a uniform interface. Dictd the
+standard server made by the DICT Development Group. 
+
+This requires: libmaa

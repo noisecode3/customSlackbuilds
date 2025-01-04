@@ -1,0 +1,349 @@
+#!/bin/bash
+
+#!/bin/bash
+
+# Slackware build script for dictd
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+cd "$(dirname "$0")" ; CWD=$(pwd)
+
+PRGNAM=dictd
+VERSION=${VERSION:-1.13.3}
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+
+if [ -z "$ARCH" ]; then
+  case "$( uname -m )" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+       *) ARCH=$( uname -m ) ;;
+  esac
+fi
+
+# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
+# the name of the created package would be, and then exit. This information
+# could be useful to other scripts.
+if [ -n "${PRINT_PACKAGE_NAME}" ]; then
+  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
+  exit 0
+fi
+
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "i586" ]; then
+  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "i686" ]; then
+  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -fPIC"
+  LIBDIRSUFFIX="64"
+else
+  SLKCFLAGS="-O2"
+  LIBDIRSUFFIX=""
+fi
+
+set -e
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION" "$PRGNAM-$VERSION.tar.gz"
+
+wget "https://downloads.sourceforge.net/dict/$PRGNAM-$VERSION.tar.gz"
+SHA256SUM="192129dfb38fa723f48a9586c79c5198fc4904fec1757176917314dd073f1171"
+if echo "$SHA256SUM $PRGNAM-$VERSION.tar.gz" | sha256sum -c; then
+  tar xvf "$TMP/$PRGNAM-$VERSION.tar.gz"
+  cd "$PRGNAM-$VERSION"
+else
+  echo "Download sha256sum mismatch"
+  exit 1
+fi
+
+chown -R root:root .
+find -L . \
+ \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
+  -o -perm 511 \) -exec chmod 755 {} \; -o \
+ \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
+  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+  
+CFLAGS="$SLKCFLAGS" \
+CXXFLAGS="$SLKCFLAGS" \
+./configure \
+  --prefix=/usr \
+  --sysconfdir=/etc/dictd \
+  --libdir=/usr/lib${LIBDIRSUFFIX} \
+  --mandir=/usr/man \
+  --localstatedir=/var/lib \
+  --build="$ARCH-slackware-linux"
+
+make LEX=flex
+make install DESTDIR="$PKG"
+
+mkdir -p "$PKG/etc/dictd"
+
+#/etc/dictd/dict.conf###########################################################
+dict_conf=$(cat <<'EOINS'
+#servers
+server localhost 
+server dict.org
+server dict0.us.dict.org
+server alt0.dict.org
+
+EOINS
+)
+echo "$dict_conf" >> "$PKG/etc/dictd/dict.conf.new" ############################
+
+#/etc/dictd/dictd.conf##########################################################
+dictd_conf=$(cat <<'EOINS'
+# /etc/dictd/dictd.conf
+
+
+# Site section here:
+
+# Access section here:
+
+access {
+allow localhost
+allow 127.0.0.1
+# this allows access only from local host
+}
+
+# Database section here:
+
+include /etc/dictd/db.list
+
+# User section here:
+EOINS
+)
+echo "$dictd_conf" >> "$PKG/etc/dictd/dictd.conf.new" ##########################
+
+#/etc/dictd/dictd###############################################################
+dictd_order=$(cat <<'EOINS'
+
+web1913 gcide wn foldoc jargon vera devil elements easton hitchcock gazetteer
+/usr/share/dictd/
+EOINS
+)
+echo "$dictd_order" >> "$PKG/etc/dictd/dictd.order.new" ########################
+
+
+#/etc/dictd/dictdconfig.alias###################################################
+dictdconfig_alias=$(cat <<'EOINS'
+#!/usr/bin/perl -lp
+
+# The format of each line is:
+#          s/^<basename-of dictionary-file>/<preferred nickname>/;
+# Lines preceded by a hash character (#) are ignored.
+ 
+s/^freedict/fd/;
+s/^gazetteer/gaz/;
+EOINS
+)
+echo "$dictdconfig_alias" >> "$PKG/etc/dictd/dictdconfig.alias.new" ############
+
+
+#/etc/dictd/db.list#############################################################
+db_list=$(cat <<'EOINS'
+
+#database dbname1
+# {
+#  data  /usr/share/dictd/dbname1.dict.dz
+#  index /usr/share/dictd/dbname1.index
+#}
+#database dbname2
+# {
+#  data  /usr/share/dictd/dbname2.dict.dz
+#  index /usr/share/dictd/dbname2.index
+#}
+#database dbname3
+# {
+#  data  /usr/share/dictd/dbname3.dict.dz
+#  index /usr/share/dictd/dbname3.index
+#}
+
+EOINS
+)
+echo "$db_list" >> "$PKG/etc/dictd/db.list.new" ################################
+
+mkdir -p "$PKG/etc/rc.d"
+
+#/etc/rc.d/rc.dictd#############################################################
+rc_dictd=$(cat <<'EOINS'
+#!/bin/sh
+# script courtesy of Sergio Vicari <sercari@esdebian.org>
+
+DICTD=/usr/sbin/dictd
+
+# DICTD_OPTIONS="-put -command_line -options -for -dictd -here"
+DICTD_OPTIONS=""
+
+
+PIDFILE=/var/run/dictd.pid
+
+start() {
+
+    if [ -x $DICTD ]; then
+        echo "dictd starting."
+        $DICTD $DICTD_OPTIONS
+    else
+        echo "rc.dictd: cannot find $DICTD or it's not executable"
+    fi
+}
+
+stop() {
+  if [ -e "$PIDFILE" ]; then
+    echo "Stopping the dictd server."
+    pid=$(cat $PIDFILE)
+    kill $pid 1> /dev/null 2> /dev/null
+    # Just in case:
+    killall dictd 1> /dev/null 2> /dev/null
+    rm -f $PIDFILE
+  fi
+}
+reload() {
+  echo "Reloading dictd."
+  if [ -e "$PIDFILE" ]; then
+    pid=$(cat $PIDFILE)
+    kill -HUP $pid
+  else
+    killall -HUP dictd
+  fi
+}
+
+status() {
+  if [ -e /var/run/dictd.pid ]; then
+    echo "the dictd server is running."
+  else
+    echo "dictd server is stopped."
+  fi
+}
+
+# See how we were called.
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  restart)
+    stop
+    start
+    ;;
+  reload)
+    reload
+    ;;
+  status)
+    status
+    ;;
+  *)
+    echo $"Usage: $0 {start|stop|restart|reload|status}"
+    ;;
+esac
+EOINS
+)
+echo "$rc_dictd" >> "$PKG/etc/rc.d/rc.dictd.new"
+chmod 0755 "$PKG/etc/rc.d/rc.dictd.new" ########################################
+
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a \
+  ANNOUNCE COPYING INITSCRIPT NEWS README TODO \
+  ./doc/rfc2229.txt ./doc/security.doc examples \
+    "$PKG/usr/doc/$PRGNAM-$VERSION"
+
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
+  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+
+find "$PKG/usr/man" -type f -exec gzip -9 {} \;
+while IFS= read -r i; do
+  ln -s "$(readlink "$i").gz" "$i.gz"
+  rm "$i"
+done < <(find "$PKG/usr/man" -type l)
+
+cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
+
+mkdir -p "$PKG/install"
+
+# This type of file can conflict with $ from this script, it's best for text 
+BSPACE=$(printf "%${#PRGNAM}s")
+cat <<EOINS >> "$PKG/install/slack-desc"
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+$BSPACE|-----handy-ruler------------------------------------------------------|
+$PRGNAM: $PRGNAM (DICT client and server)
+$PRGNAM:
+$PRGNAM: This package contains client/server software implementing the
+$PRGNAM: Dictionary Server Protocol, as described in RFC 2229.
+$PRGNAM:
+$PRGNAM: The Dictionary Server Protocol (DICT) is a TCP transaction based
+$PRGNAM: query/response protocol that allows a client to access dictionary
+$PRGNAM: definitions from a set of natural language dictionary databases.
+$PRGNAM: No dictionaries included for server.
+$PRGNAM:
+$PRGNAM:
+EOINS
+
+# This type of file good for files with default permissions
+doinst=$(cat <<'EOINS'
+config() {
+  NEW="$1"
+  OLD="$(dirname $NEW)/$(basename $NEW .new)"
+  # If there's no config file by that name, mv it over:
+  if [ ! -r $OLD ]; then
+    mv $NEW $OLD
+  elif [ "$(cat $OLD | md5sum)" = "$(cat $NEW | md5sum)" ]; then
+    # toss the redundant copy
+    rm $NEW
+  fi
+  # Otherwise, we leave the .new copy for the admin to consider...
+}
+
+# Keep same perms on rc.dictd.new:
+if [ -e etc/rc.d/rc.dictd ]; then
+  cp -a etc/rc.d/rc.dictd etc/rc.d/rc.dictd.new.incoming
+  cat etc/rc.d/rc.dictd.new > etc/rc.d/rc.dictd.new.incoming
+  mv etc/rc.d/rc.dictd.new.incoming etc/rc.d/rc.dictd.new
+fi
+
+config etc/rc.d/rc.dictd.new
+config etc/dictd/dict.conf.new
+config etc/dictd/dictd.conf.new
+config etc/dictd/db.list.new
+config etc/dictd/dictd.order.new
+config etc/dictd/dictdconfig.alias.new
+EOINS
+)
+echo "$doinst" >> "$PKG/install/doinst.sh"
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
