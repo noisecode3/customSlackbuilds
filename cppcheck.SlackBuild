@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for template
+# Slackware build script for cppcheck
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -25,8 +25,8 @@
 
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
-PRGNAM=template
-VERSION=${VERSION:-git} # or tarball source or binary, you would need to set
+PRGNAM=cppcheck
+VERSION=${VERSION:-git}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -71,16 +71,14 @@ rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 rm -rf "$PRGNAM"
-# work for setting both tag and branch
+
 if [ "$VERSION" != "git" ]; then
-  git clone --depth 1 -b "$VERSION" https://github.com/noisecode3/template
+  git clone --depth 1 -b "$VERSION" https://github.com/danmar/cppcheck
   cd "$PRGNAM"
 else
-  git clone https://github.com/noisecode3/template
+  git clone https://github.com/danmar/cppcheck
   cd "$PRGNAM"
-  VERSION=$(git describe --tags)
-  VERSION=${VERSION::-10}
-  VERSION=$(echo "$VERSION" | tr '-' . )
+  VERSION=$(git describe --tags 2>/dev/null | cut -d'-' -f1-2 | tr '-' . || echo "0.0.0")
 fi
 chown -R root:root .
 find -L . \
@@ -89,78 +87,36 @@ find -L . \
  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
-# patch
-patch1=$(cat <<'EOINS'
---- dmenu-4.9-orig/config.mk	2019-02-02 05:55:02.000000000 -0700
-+++ dmenu-4.9/config.mk	2020-04-19 13:12:15.427727907 -0600
-@@ -4,6 +4,7 @@
- # paths
- PREFIX = /usr/local
- MANPREFIX = $(PREFIX)/share/man
-+LIBDIR = /usr/local/lib
- 
- X11INC = /usr/X11R6/include
- X11LIB = /usr/X11R6/lib
-@@ -20,11 +21,12 @@
- 
- # includes and libs
- INCS = -I$(X11INC) -I$(FREETYPEINC)
--LIBS = -L$(X11LIB) -lX11 $(XINERAMALIBS) $(FREETYPELIBS)
-+LIBS = -L$(LIBDIR) -L$(X11LIB) -lX11 $(XINERAMALIBS) $(FREETYPELIBS)
- 
- # flags
-+OPTS ?= -Os
- CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\" $(XINERAMAFLAGS)
--CFLAGS   = -std=c99 -pedantic -Wall -Os $(INCS) $(CPPFLAGS)
-+CFLAGS   = -std=c99 -pedantic -Wall $(OPTS) $(INCS) $(CPPFLAGS)
- LDFLAGS  = $(LIBS)
- 
- # compiler and linker
-EOINS
-)
-echo "$patch1" | patch -p1
+mkdir -p build
+cd build
 
-CFLAGS="$SLKCFLAGS" \
-CXXFLAGS="$SLKCFLAGS" \
-meson setup \
-  --prefix /usr \
-  --libdir /usr/lib$LIBDIRSUFFIX \
-  --mandir /usr/man \
-  --sysconfdir /etc \
-  --localstatedir /var \
-  -Dmans=true \
-  build
-CFLAGS="$SLKCFLAGS" ninja -C build
-DESTDIR=$PKG ninja -C build install
-
-config=$(cat <<'EOINS'
-some file text
-var1=black
-var2=blue
-
-EOINS
-)
-FILE_NAME="$PKG/etc/prgram/config"
-echo "$config" >> "$FILE_NAME"
-chmod 0755 "$FILE_NAME"
-
-mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a LICENSE README "$PKG/usr/doc/$PRGNAM-$VERSION"
+export CXXFLAGS="$SLKCFLAGS -DNDEBUG -Wall -Wno-sign-compare -Wno-unused-function"
+  cmake \
+    -DCMAKE_CXX_FLAGS:STRING="$CXXFLAGS" \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_GUI=OFF \
+    -DUSE_MATCHCOMPILER=ON \
+    -DHAVE_RULES=ON \
+    ..
+  make
+  make install/strip DESTDIR="$PKG"
+cd ..
 
 find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
   | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
-find "$PKG/usr/man" -type f -exec gzip -9 {} \;
-while IFS= read -r i; do
-    ln -s "$(readlink "$i").gz" "$i.gz"
-    rm "$i"
-done < <(find "$PKG/usr/man" -type l)
+rm -f "$PKG"/{,usr/}lib${LIBDIRSUFFIX}/*.la
+
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a \
+    AUTHORS COPYING readme.{md,txt} \
+    "$PKG/usr/doc/$PRGNAM-$VERSION"
 
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
 
 mkdir -p "$PKG/install"
 
-# This type of file can conflict with $ from this script, it's best for text 
 BSPACE=$(printf "%${#PRGNAM}s")
 cat <<EOINS >> "$PKG/install/slack-desc"
 # HOW TO EDIT THIS FILE:
@@ -171,28 +127,18 @@ cat <<EOINS >> "$PKG/install/slack-desc"
 # customary to leave one space after the ':' except on otherwise blank lines.
 
 $BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (short text)
+$PRGNAM: $PRGNAM (A tool for static C/C++ code analysis)
 $PRGNAM:
-$PRGNAM: long text
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
+$PRGNAM: Cppcheck is a static analysis tool for C/C++ code. Unlike C/C++
+$PRGNAM: compilers and many other analysis tools, it doesn't detect syntax
+$PRGNAM: errors. Cppcheck only detects the types of bugs that the compilers
+$PRGNAM: normally fail to detect. The goal is no false positives.
 $PRGNAM:
 $PRGNAM:
 $PRGNAM:
 $PRGNAM:
 $PRGNAM:
 EOINS
-
-# This type of file good for files with default permissions
-doinst=$(cat <<'EOINS'
-config() {
-if [ -x /usr/bin/update-desktop-database ]; then
-  /usr/bin/update-desktop-database -q usr/share/applications >/dev/null 2>&1
-fi
-EOINS
-)
-echo "$doinst" >> "$PKG/install/doinst.sh"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

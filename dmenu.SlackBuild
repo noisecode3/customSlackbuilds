@@ -21,7 +21,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd $(dirname $0) ; CWD=$(pwd)
+cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=dmenu
 VERSION=${VERSION:-5.2}
@@ -40,7 +40,7 @@ fi
 # If the variable PRINT_PACKAGE_NAME is set, then this script will report what
 # the name of the created package would be, and then exit. This information
 # could be useful to other scripts.
-if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
+if [ -n "${PRINT_PACKAGE_NAME}" ]; then
   echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
   exit 0
 fi
@@ -65,18 +65,18 @@ fi
 
 set -e
 
-rm -rf $PKG
-mkdir -p $TMP $PKG $OUTPUT
-cd $TMP
-rm -rf dmenu-$VERSION dmenu-$VERSION.tar.gz
-wget https://dl.suckless.org/tools/dmenu-$VERSION.tar.gz
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "dmenu-$VERSION" "dmenu-$VERSION.tar.gz"
+wget "https://dl.suckless.org/tools/dmenu-$VERSION.tar.gz"
 if echo "d4d4ca77b59140f272272db537e05bb91a5914f56802652dc57e61a773d43792 dmenu-$VERSION.tar.gz" | sha256sum -c; then
-    tar xvf dmenu-$VERSION.tar.gz
+    tar xvf "dmenu-$VERSION.tar.gz"
 else
     echo "download problem"
     exit 1
 fi
-cd $TMP/dmenu-$VERSION
+cd "$TMP/dmenu-$VERSION"
 chown -R root:root .
 find -L . \
  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
@@ -85,7 +85,7 @@ find -L . \
   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
   
 # fixup the cflags and libdir settings to prevent multilib conflicts
-doinst=$(cat <<'EOINS'
+PATCH=$(cat <<'EOINS'
 --- dmenu-4.9-orig/config.mk	2019-02-02 05:55:02.000000000 -0700
 +++ dmenu-4.9/config.mk	2020-04-19 13:12:15.427727907 -0600
 @@ -4,6 +4,7 @@
@@ -113,9 +113,7 @@ doinst=$(cat <<'EOINS'
  # compiler and linker
 EOINS
 )
-echo "$doinst" | patch -p1
-
-#patch -p1 < $cwd/dmenu-4.9-libdir_cflags_fixups.diff
+echo "$PATCH" | patch -p1
 
 make install \
   OPTS="$SLKCFLAGS" \
@@ -124,20 +122,23 @@ make install \
   MANPREFIX=/usr/man \
   X11INC=/usr/include \
   X11LIB=/usr/lib${LIBDIRSUFFIX}/X11 \
-  DESTDIR=$PKG
+  DESTDIR="$PKG"
 
-find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
-  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
+  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
-find $PKG/usr/man -type f -exec gzip -9 {} +
-for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
+find "$PKG/usr/man" -type f -exec gzip -9 {} \;
+while IFS= read -r i; do
+    ln -s "$(readlink "$i").gz" "$i.gz"
+    rm "$i"
+done < <(find "$PKG/usr/man" -type l)
 
-find $PKG -depth -type d -empty -delete || true
-mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
-cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+find "$PKG" -depth -type d -empty -delete || true
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
 
-mkdir -p $PKG/install
-cat <<EOINS >> $PKG/install/slack-desc
+mkdir -p "$PKG/install"
+cat <<EOINS >> "$PKG/install/slack-desc"
 # HOW TO EDIT THIS FILE:
 # The "handy ruler" below makes it easier to edit a package description.
 # Line up the first '|' above the ':' following the base package name, and
@@ -158,5 +159,5 @@ dmenu:
 dmenu:
 dmenu:
 EOINS
-cd $PKG
-/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
