@@ -26,7 +26,7 @@
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=cppcheck
-VERSION=${VERSION:-git}
+VERSION=${VERSION:-2.6.3}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -86,6 +86,45 @@ find -L . \
   -o -perm 511 \) -exec chmod 755 {} \; -o \
  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+
+# cherry pick patches
+# based on e86abfdc5faee6ab65cfdb5e176023bac1713269
+# I just remove it
+# No unmatched suppressions list in quiet output.
+# When user wants to see only errors printed (--quiet in CLI) we
+# must obey that. And not print unmatchedSuppressions list.
+
+# Ticket: #2895 (Cannot suppress unmatchedSuppression reports)
+PATCH=$(cat <<'EOINS'
+diff --git a/cli/cppcheckexecutor.cpp b/cli/cppcheckexecutor.cpp
+index 3cef91f..1201c19 100644
+--- a/cli/cppcheckexecutor.cpp
++++ b/cli/cppcheckexecutor.cpp
+@@ -973,22 +973,6 @@ int CppCheckExecutor::check_internal(CppCheck& cppcheck, int /*argc*/, const cha
+
+     cppcheck.analyseWholeProgram(mSettings->buildDir, mFiles);
+
+-    if (settings.severity.isEnabled(Severity::information) || settings.checkConfiguration) {
+-        const bool enableUnusedFunctionCheck = cppcheck.isUnusedFunctionCheckEnabled();
+-
+-        if (settings.jointSuppressionReport) {
+-            for (std::map<std::string, std::size_t>::const_iterator i = mFiles.begin(); i != mFiles.end(); ++i) {
+-                const bool err = reportUnmatchedSuppressions(settings.nomsg.getUnmatchedLocalSuppressions(i->first, enableUnusedFunctionCheck));
+-                if (err && returnValue == 0)
+-                    returnValue = settings.exitCode;
+-            }
+-        }
+-
+-        const bool err = reportUnmatchedSuppressions(settings.nomsg.getUnmatchedGlobalSuppressions(enableUnusedFunctionCheck));
+-        if (err && returnValue == 0)
+-            returnValue = settings.exitCode;
+-    }
+-
+     if (!settings.checkConfiguration) {
+         cppcheck.tooManyConfigsError("",0U);
+EOINS
+)
+echo "$PATCH" | patch -p1 -F 10
 
 mkdir -p build
 cd build
