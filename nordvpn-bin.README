@@ -40,7 +40,8 @@ You don't need to setup anything extra in NetworkManager
 Important Notes:
     Read: https://nordvpn.com/blog/private-dns/
     https://www.dnsleaktest.com/
-    and use tcpdump to check the https to 104.19.159.190
+    and use tcpdump to check the https to Cloudflare (ASN13335)
+    like 104.19.159.190 or 104.16.208.203 that is used by nordvpn
     and that there is only you're local and nordvpn domain/ip in there
     you might get this https://en.wikipedia.org/wiki/Mcast.net should be normal
 
