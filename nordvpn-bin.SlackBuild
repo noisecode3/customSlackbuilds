@@ -25,7 +25,7 @@
 cd "$(dirname "$0")" || exit 1 ; CWD=$(pwd)
 
 PRGNAM=nordvpn-bin
-VERSION=${VERSION:-3.20.0}
+VERSION=${VERSION:-4.5.0}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -79,7 +79,7 @@ rm -f "nordvpn_${VERSION}_amd64.deb"
 wget --trust-server-names "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/nordvpn_${VERSION}_amd64.deb"
 
 # Verify the checksum
-if echo "dff1d20933edff50a9aeba550fad066b4d8dcfebc1c0d044d4b125fbbcfb003b  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
+if echo "6de9093b384b1b016c611b8f6a000dc1476ec82b9f694e17a093f05a8067891f  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
   echo "Checksum verified."
 
   # Extract the data.tar.gz file
@@ -110,8 +110,7 @@ cd "$PKG"
 mkdir usr/lib64
 mv usr/lib/nordvpn usr/lib64/
 rm -fr etc usr/lib # What's left is unneeded for Slackware
-chmod 755 usr/lib64/nordvpn/libsqlite3.so
-chmod 755 usr/lib64/nordvpn/libtelio.so
+chmod 755 usr/lib64/nordvpn/*.so
 
 # Helper programs not useful to run outside the app
 mkdir -p usr/libexec/nordvpn
