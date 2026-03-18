@@ -8,8 +8,12 @@
       "customType": "regex",
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "NordSecurity/nordvpn-linux",
-      "fileMatch": ["^nordvpn-bin\\.SlackBuild$"],
-      "matchStrings": [ "VERSION=\\${VERSION:-(?<currentValue>.*?)}" ]
+      "managerFilePatterns": [
+        "/^nordvpn-bin\\.SlackBuild$/"
+      ],
+      "matchStrings": [
+        "VERSION=\\${VERSION:-(?<currentValue>.*?)}"
+      ]
     }
   ]
 }
