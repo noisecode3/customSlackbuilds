@@ -92,10 +92,11 @@ mkdir -p build
 cd build
   cmake \
     -DCMAKE_C_FLAGS:STRING="$SLKCFLAGS" \
-    -DCMAKE_CXX_FLAGS:STRING="$SLKCFLAGS -Wno-error=implicit-fallthrough -Wno-error=stringop-truncation -Wno-error=deprecated-copy" \
+    -DCMAKE_CXX_FLAGS:STRING="$SLKCFLAGS" \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DPYTHON_EXECUTABLE=/usr/bin/python3 \
     -DCMAKE_INSTALL_MANDIR=/usr/man \
+    -DBUILD_DOC=OFF \
     -DCMAKE_INSTALL_DOCDIR=/usr/doc/$PRGNAM-$VERSION \
     -DCMAKE_BUILD_TYPE=Release ..
   make
