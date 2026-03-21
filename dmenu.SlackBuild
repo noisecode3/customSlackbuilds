@@ -24,7 +24,7 @@
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=dmenu
-VERSION=${VERSION:-5.2}
+VERSION=${VERSION:-5.4}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -70,7 +70,7 @@ mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 rm -rf "dmenu-$VERSION" "dmenu-$VERSION.tar.gz"
 wget "https://dl.suckless.org/tools/dmenu-$VERSION.tar.gz"
-if echo "d4d4ca77b59140f272272db537e05bb91a5914f56802652dc57e61a773d43792 dmenu-$VERSION.tar.gz" | sha256sum -c; then
+if echo "8fbace2a0847aa80fe861066b118252dcc7b4ca0a0a8f3a93af02da8fb6cd453  dmenu-$VERSION.tar.gz" | sha256sum -c; then
     tar xvf "dmenu-$VERSION.tar.gz"
 else
     echo "download problem"

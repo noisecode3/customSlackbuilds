@@ -26,7 +26,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd $(dirname $0) ; CWD=$(pwd)
+cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=i3
 VERSION=${VERSION:-git}
@@ -70,19 +70,19 @@ fi
 
 set -e
 
-rm -rf $PKG
-mkdir -p $TMP $PKG $OUTPUT
-cd $TMP
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
 rm -rf $PRGNAM
 if [ "$VERSION" != "git" ]; then
-  git clone --depth 1 -b $VERSION https://github.com/i3/i3
+  git clone --depth 1 -b "$VERSION" https://github.com/i3/i3
   cd $PRGNAM
 else
   git clone https://github.com/i3/i3
   cd $PRGNAM
   VERSION=$(git describe --tags)
   VERSION=${VERSION::-10}
-  VERSION=$(echo $VERSION | tr '-' . )
+  VERSION=$(echo "$VERSION" | tr '-' . )
 fi
 chown -R root:root .
 find -L . \
@@ -103,21 +103,21 @@ meson setup \
 CFLAGS="$SLKCFLAGS" ninja -C build
 DESTDIR=$PKG ninja -C build install
 
-find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
   | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
 # Don't clobber the default config
-mv $PKG/etc/i3/config $PKG/etc/i3/config.new
-mv $PKG/etc/i3/config.keycodes $PKG/etc/i3/config.keycodes.new
+mv "$PKG/etc/i3/config" "$PKG/etc/i3/config.new"
+mv "$PKG/etc/i3/config.keycodes" "$PKG/etc/i3/config.keycodes.new"
 
 # Make alacritty default terminal
-sed -i 's/i3-sensible-terminal/alacritty/' $PKG/etc/i3/config.new
+sed -i 's/i3-sensible-terminal/alacritty/' "$PKG/etc/i3/config.new"
 
 # Fix man page permissions
-chmod 0644 $PKG/usr/man/man1/*
+chmod 0644 "$PKG/usr/man/man1/"*
 
 # Install an xinitrc script
-mkdir -p $PKG/etc/X11/xinit
+mkdir -p "$PKG/etc/X11/xinit"
 xinit=$(cat <<'EOINS'
 #!/bin/sh
 
@@ -133,25 +133,21 @@ sysmodmap=/etc/X11/xinit/.Xmodmap
 [ -f $usermodmap ] && /usr/bin/xmodmap $usermodmap
 
 # Start i3
-if [ -z "$DESKTOP_SESSION" -a -x /usr/bin/ck-launch-session ]; then
-    exec ck-launch-session dbus-launch --exit-with-session /usr/bin/i3
-else
-    exec /usr/bin/i3
-fi
+exec dbus-launch --exit-with-session /usr/bin/i3
 EOINS
 )
-echo "$xinit" >> $PKG/etc/X11/xinit/xinitrc.i3
-chmod 0755 $PKG/etc/X11/xinit/xinitrc.i3
+echo "$xinit" >> "$PKG/etc/X11/xinit/xinitrc.i3"
+chmod 0755 "$PKG/etc/X11/xinit/xinitrc.i3"
 
-mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION/html $PKG/usr/doc/$PRGNAM-$VERSION/txt
-cp -a DEPENDS LICENSE RELEASE-NOTES-* $PKG/usr/doc/$PRGNAM-$VERSION
-cp -a docs/* $PKG/usr/doc/$PRGNAM-$VERSION/txt
-( cd $PKG/usr/doc/$PRGNAM-$VERSION/txt
-  mv *.html *.png *.css ../html/
-  rm i3-pod2html *.conf *.dia
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION/html" "$PKG/usr/doc/$PRGNAM-$VERSION/txt"
+cp -a DEPENDS LICENSE RELEASE-NOTES-* "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a docs/* "$PKG/usr/doc/$PRGNAM-$VERSION/txt"
+( cd "$PKG/usr/doc/$PRGNAM-$VERSION/txt"
+  mv ./*.html ./*.png ./*.css ../html/
+  rm i3-pod2html ./*.conf ./*.dia
 )
 
-rm -r $PKG/usr/share/doc
+rm -r "$PKG/usr/share/doc"
 
 cd AnyEvent-I3
 
@@ -161,23 +157,29 @@ perl Makefile.PL \
   INSTALLVENDORMAN3DIR=/usr/man/man3
 make
 make test
-make install DESTDIR=$PKG
+make install DESTDIR="$PKG"
 
-find $PKG -name perllocal.pod -o -name ".packlist" -o -name "*.bs" | xargs rm -f || true
+find "$PKG" \( -name perllocal.pod -o -name ".packlist" -o -name "*.bs" \) -delete
 
-mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION/AnyEvent-I3
-cp -a Changes README MANIFEST $PKG/usr/doc/$PRGNAM-$VERSION/AnyEvent-I3/
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION/AnyEvent-I3"
+cp -a Changes README MANIFEST "$PKG/usr/doc/$PRGNAM-$VERSION/AnyEvent-I3/"
 
 # man pages
-find $PKG/usr/man -type f -exec gzip -9 {} +
-for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
 
-find $PKG -depth -type d -empty -delete || true
 
-cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+find "$PKG/usr/man" -type f -exec gzip -9 {} \;
+while IFS= read -r i; do
+    ln -s "$(readlink "$i").gz" "$i.gz"
+    rm "$i"
+done < <(find "$PKG/usr/man" -type l)
 
-mkdir -p $PKG/install
-cat <<EOINS >> $PKG/install/slack-desc
+
+find "$PKG" -depth -type d -empty -delete || true
+
+cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
+
+mkdir -p "$PKG/install"
+cat <<EOINS >> "$PKG/install/slack-desc"
 # HOW TO EDIT THIS FILE:
 # The "handy ruler" below makes it easier to edit a package description.
 # Line up the first '|' above the ':' following the base package name, and
@@ -220,6 +222,6 @@ if [ -x /usr/bin/update-desktop-database ]; then
 fi
 EOINS
 )
-echo "$doinst" >> $PKG/install/doinst.sh
-cd $PKG
-/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE
+echo "$doinst" >> "$PKG/install/doinst.sh"
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
