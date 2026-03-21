@@ -22,5 +22,5 @@ set $launcher-clipboard-remove clipcat-menu remove
 bindsym $mod+p exec $launcher-clipboard-insert
 bindsym $mod+o exec $launcher-clipboard-remove
 
-For building you might need
-protobuf3
+This requires:
+protobuf3 rust-opt
