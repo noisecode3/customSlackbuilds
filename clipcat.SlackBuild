@@ -22,7 +22,7 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd $(dirname $0) ; CWD=$(pwd)
+cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=clipcat
 VERSION=${VERSION:-main} #branch
@@ -51,16 +51,12 @@ PKG=$TMP/package-$PRGNAM
 OUTPUT=${OUTPUT:-/tmp}
 
 if [ "$ARCH" = "i586" ]; then
-  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
   LIBDIRSUFFIX=""
 elif [ "$ARCH" = "i686" ]; then
-  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
   LIBDIRSUFFIX=""
 elif [ "$ARCH" = "x86_64" ]; then
-  SLKCFLAGS="-O2 -fPIC"
   LIBDIRSUFFIX="64"
 else
-  SLKCFLAGS="-O2"
   LIBDIRSUFFIX=""
 fi
 
@@ -73,13 +69,13 @@ fi
 
 set -e
 
-rm -rf $PKG
-mkdir -p $TMP $PKG $OUTPUT
-cd $TMP
-rm -rf $PRGNAM
-git clone --depth 1 -b $VERSION https://github.com/xrelkd/clipcat
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM"
+git clone -b "$VERSION" https://github.com/xrelkd/clipcat
 cd clipcat
-VERSION=$(git describe --tags | sed 's/^v//' )
+VERSION=$(git describe --tags --always | tr '-' '.' | sed -E 's/^v//; s/\.g[0-9a-f]*$//')
 chown -R root:root .
 find -L . \
   \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
@@ -91,22 +87,26 @@ mkdir -p completion
 cargo build --release
 binaries=("clipcat-menu" "clipcat-notify" "clipcatctl" "clipcatd")
 for bin in "${binaries[@]}"; do
-    target/release/$bin completions bash > completion/$bin
+    "target/release/$bin" completions bash > "completion/$bin.bash"
+    "target/release/$bin" completions zsh >  "completion/$bin.zsh"
+    "target/release/$bin" completions fish > "completion/$bin.fish"
 done
 
 install -Dm755 -t "$PKG/usr/bin" "${binaries[@]/#/target/release/}"
 for bin in "${binaries[@]}"; do
-    install -Dm644 completion/$bin "${PKG}/usr/share/bash-completion/completions/$bin"
+    install -Dm644 "completion/$bin.bash" "${PKG}/usr/share/bash-completion/completions/$bin"
+    install -Dm644 "completion/$bin.zsh" "${PKG}/usr/share/zsh/site-functions/_$bin"
+    install -Dm644 "completion/$bin.fish" "${PKG}/usr/share/fish/vendor_completions.d/$bin.fish"
 done
 
-find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
   | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
-mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
-cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
-mv LICENSE README.md $PKG/usr/doc/$PRGNAM-$VERSION
-mkdir -p $PKG/install
-cat <<EOINS >> $PKG/install/slack-desc
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
+mv LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION"
+mkdir -p "$PKG/install"
+cat <<EOINS >> "$PKG/install/slack-desc"
 # HOW TO EDIT THIS FILE:
 # The "handy ruler" below makes it easier to edit a package description.
 # Line up the first '|' above the ':' following the base package name, and
@@ -128,5 +128,5 @@ clipcat:
 clipcat:
 EOINS
 
-cd $PKG
-/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

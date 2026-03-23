@@ -1,0 +1,31 @@
+aichat is an all-in-one LLM CLI tool featuring Shell Assistant,
+CMD & REPL Mode, RAG, AI Tools & Agents, and More.
+
+Integrate seamlessly with over 20 leading LLM providers through a unified
+interface. Supported providers include OpenAI, Claude,
+Gemini (Google AI Studio), Ollama, Groq, Azure-OpenAI, VertexAI, Bedrock,
+Github Models, Mistral, Deepseek, AI21, XAI Grok, Cohere, Perplexity,
+Cloudflare, OpenRouter, Ernie, Qianwen, Moonshot, ZhipuAI, MiniMax, Deepinfra,
+VoyageAI, any OpenAI-Compatible API provider. Explore powerful command-line
+functionalities with AIChat's CMD mode. Experience an interactive Chat-REPL with
+features like tab autocompletion, multi-line input support, history search,
+configurable keybindings, and custom REPL prompts. Elevate your command-line
+efficiency. Describe your tasks in natural language, and let AIChat transform
+them into precise shell commands. AIChat intelligently adjusts to your OS and
+shell environment. Accept diverse input forms such as stdin, local files and
+directories, and remote URLs, allowing flexibility in data handling. Customize
+roles to tailor LLM behavior, enhancing interaction efficiency and boosting
+productivity. Maintain context-aware conversations through sessions, ensuring
+continuity in interactions. Streamline repetitive tasks by combining a series
+of REPL commands into a custom macro. Function calling supercharges LLMs by
+connecting them to external tools and data sources. This unlocks a world of
+possibilities, enabling LLMs to go beyond their core capabilities and tackle a
+wider range of tasks.
+
+We have created a new repository https://github.com/sigoden/llm-functions to
+help you make the most of this feature. AI Tools & MCP Integrate external tools
+to automate tasks, retrieve information, and perform actions directly within
+your workflow. AI Agents (CLI version of OpenAI GPTs) AI Agent = Instructions
+(Prompt) + Tools (Function Callings) + Documents (RAG).
+
+This requires: rust-opt mold

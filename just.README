@@ -26,3 +26,5 @@ It has a ton of useful features, and many improvements over make:
 
  * just can be invoked from any subdirectory, not just the directory that
    contains the justfile.
+
+This requires: rust-opt

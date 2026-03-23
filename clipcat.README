@@ -14,7 +14,12 @@ Set dbus to false in clipcatd.toml
 enable = false
 
 In the file: ~/.config/i3/config
-exec --no-startup-id clipcatd
+exec --no-startup-id clipcatd --replace
+
+You have to kill the cat if you logout i3 wont do that
+# exit i3 (logs you out of your X session)
+bindsym $mod+Shift+e exec "rofi -dmenu -p 'Exit i3?' -theme-str 'window {width: 8%; height: 6%;}' <<< 'Yes|No' | grep -q 'Yes' && pkill -x clipcatd; i3-msg exit"
+
 
 set $launcher-clipboard-insert clipcat-menu insert
 set $launcher-clipboard-remove clipcat-menu remove
