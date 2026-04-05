@@ -1,9 +1,2 @@
 slackbuilds that use git. There will only be 2 files per build. package.README and package.SlackBuild
 all package must pass sbopkglint
-
-Python packages uses git to download and they must all be set to specific commit.
-I have used tags now but they are not that safe because they can be changed but
-shasum cant, only removed. When there is a lot of git repositories we should not just
-trust all of them. We look at the tarballs and diff, we look at other distribution patches
-I find useful. Creating a custom Python3 in /opt/ for some apps specifically. It's a work
-in progress mainly just to use the newest kitty cus I needed some functionality.
