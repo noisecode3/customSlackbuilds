@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Slackware build script for clipcat
+# Slackware build script for qhull
 
-# Copyright Martin Bångens 2024
+# Copyright Martin Bångens Sweden
 # All rights reserved.
 #
 # Redistribution and use of this script, with or without modification, is
@@ -24,8 +24,8 @@
 
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
-PRGNAM=clipcat
-VERSION=${VERSION:-main} #branch
+PRGNAM=qhull
+VERSION=${VERSION:-2020.2}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -38,10 +38,7 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 
-# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
-# the name of the created package would be, and then exit. This information
-# could be useful to other scripts.
-if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
+if [ -n "${PRINT_PACKAGE_NAME}" ]; then
   echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
   exit 0
 fi
@@ -51,20 +48,17 @@ PKG=$TMP/package-$PRGNAM
 OUTPUT=${OUTPUT:-/tmp}
 
 if [ "$ARCH" = "i586" ]; then
+  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
   LIBDIRSUFFIX=""
 elif [ "$ARCH" = "i686" ]; then
+  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
   LIBDIRSUFFIX=""
 elif [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -fPIC"
   LIBDIRSUFFIX="64"
 else
+  SLKCFLAGS="-O2"
   LIBDIRSUFFIX=""
-fi
-
-export PATH="/opt/rust/bin:$PATH"
-if [ -z "$LD_LIBRARY_PATH" ]; then
-  export LD_LIBRARY_PATH="/opt/rust/lib$LIBDIRSUFFIX"
-else
-  export LD_LIBRARY_PATH="/opt/rust/lib$LIBDIRSUFFIX:$LD_LIBRARY_PATH"
 fi
 
 set -e
@@ -73,38 +67,54 @@ rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 rm -rf "$PRGNAM"
-git clone -b "$VERSION" https://github.com/xrelkd/clipcat
-cd clipcat
-VERSION=$(git describe --tags --always | tr '-' '.' | sed -E 's/^v//; s/\.g[0-9a-f]*$//')
+git clone --depth 1 -b "$VERSION" https://github.com/qhull/qhull
+cd "$PRGNAM"
+VERSION=$(git describe --tags --always | tr '-' '.' | cut -d'.' -f1-4)
+
 chown -R root:root .
 find -L . \
-  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-   -o -perm 511 \) -exec chmod 755 {} \; -o \
-  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+ \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
+  -o -perm 511 \) -exec chmod 755 {} \; -o \
+ \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
+  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
-mkdir -p completion
-cargo build --release
-binaries=("clipcat-menu" "clipcat-notify" "clipcatctl" "clipcatd")
-for bin in "${binaries[@]}"; do
-    "target/release/$bin" completions bash > "completion/$bin.bash"
-    "target/release/$bin" completions zsh >  "completion/$bin.zsh"
-    "target/release/$bin" completions fish > "completion/$bin.fish"
-done
+mkdir -p build
+cd build
+  cmake \
+    -DCMAKE_C_FLAGS:STRING="$SLKCFLAGS -ffat-lto-objects" \
+    -DCMAKE_CXX_FLAGS:STRING="$SLKCFLAGS -ffat-lto-objects" \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DDOC_INSTALL_DIR="/usr/doc/$PRGNAM-$VERSION" \
+    -DLIB_INSTALL_DIR=lib${LIBDIRSUFFIX} \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DMAN_INSTALL_DIR=/usr/man \
+    -DCMAKE_BUILD_TYPE=Release ..
+  make
+  make install/strip DESTDIR="$PKG"
+cd ..
 
-install -Dm755 -t "$PKG/usr/bin" "${binaries[@]/#/target/release/}"
-for bin in "${binaries[@]}"; do
-    install -Dm644 "completion/$bin.bash" "${PKG}/usr/share/bash-completion/completions/$bin"
-    install -Dm644 "completion/$bin.zsh" "${PKG}/usr/share/zsh/site-functions/_$bin"
-    install -Dm644 "completion/$bin.fish" "${PKG}/usr/share/fish/vendor_completions.d/$bin.fish"
-done
+if [ "$LIBDIRSUFFIX" = "64" ]; then
+  mv "$PKG/usr/lib/cmake" "$PKG/usr/lib64/"
+  mv "$PKG/usr/lib/pkgconfig" "$PKG/usr/lib64/"
 
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
-  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+  sed -i "s|/usr/lib|/usr/lib64|g" \
+    "$PKG/usr/lib64/cmake/Qhull/"*.cmake
+
+  rmdir "$PKG/usr/lib"
+fi
+
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
+  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+
+find "$PKG/usr/man" -type f -exec gzip -9 {} \;
+while IFS= read -r i; do
+    ln -s "$(readlink "$i").gz" "$i.gz"
+    rm "$i"
+done < <(find "$PKG/usr/man" -type l)
 
 mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a COPYING.txt README.txt "$PKG/usr/doc/$PRGNAM-$VERSION"
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-mv LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION"
 
 mkdir -p "$PKG/install"
 BSPACE=$(printf "%${#PRGNAM}s")
@@ -117,17 +127,17 @@ cat <<EOINS >> "$PKG/install/slack-desc"
 # customary to leave one space after the ':' except on otherwise blank lines.
 
 $BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (Clipcat clipboard manager)
+$PRGNAM: $PRGNAM (Qhull computes the convex hull and more)
 $PRGNAM:
-$PRGNAM: A clipboard manager written in Rust Programming Language.
+$PRGNAM: Qhull computes the convex hull, Delaunay triangulation,
+$PRGNAM: Voronoi diagram, halfspace intersection about a point, furthest-site
+$PRGNAM: Delaunay triangulation, and furthest-site Voronoi diagram. The source
+$PRGNAM: code runs in 2-d, 3-d, 4-d, and higher dimensions. Qhull implements
+$PRGNAM: the Quickhull algorithm for computing the convex hull. It handles
+$PRGNAM: roundoff errors from floating point arithmetic. It computes volumes,
+$PRGNAM: surface areas, and approximations to the convex hull.
 $PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
+$PRGNAM: http://www.qhull.org/
 EOINS
 
 cd "$PKG"

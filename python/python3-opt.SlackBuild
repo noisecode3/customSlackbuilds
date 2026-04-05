@@ -1,0 +1,203 @@
+#!/bin/bash
+
+# Slackware build script for python3-opt
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+cd "$(dirname "$0")" ; CWD=$(pwd)
+
+PRGNAM=python3-opt
+VERSION=${VERSION:-3.12.13}
+BRANCH_VERSION=$(echo "$VERSION" | cut -d. -f1,2)
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+NUMJOBS=${NUMJOBS:-" -j$(($(nproc) + 1)) "}
+SHA256SUM="c08bc65a81971c1dd5783182826503369466c7e67374d1646519adf05207b684"
+DOC_SHA256SUM="aa00959e62e77ee86d3eff5759746a5e00de74c8cb04447ae61801090428f9e4"
+
+if [ -z "$ARCH" ]; then
+  case "$( uname -m )" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+       *) ARCH=$( uname -m ) ;;
+  esac
+fi
+
+if [ -n "${PRINT_PACKAGE_NAME}" ]; then
+  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
+  exit 0
+fi
+
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "i586" ]; then
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "i686" ]; then
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "x86_64" ]; then
+  LIBDIRSUFFIX="64"
+else
+  LIBDIRSUFFIX=""
+fi
+
+set -e
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "Python-$VERSION" "Python-$VERSION.tar.xz"
+
+wget "https://www.python.org/ftp/python/$VERSION/Python-$VERSION.tar.xz"
+if echo "$SHA256SUM  Python-$VERSION.tar.xz" | sha256sum -c; then
+  tar xvf "$TMP/Python-$VERSION.tar.xz"
+  cd "Python-$VERSION"
+else
+  echo "Download sha256sum mismatch"
+  exit 1
+fi
+
+wget "https://www.python.org/ftp/python/doc/$VERSION/python-$VERSION-docs-text.tar.bz2"
+if ! echo "$DOC_SHA256SUM  python-$VERSION-docs-text.tar.bz2" | sha256sum -c; then
+  echo "Download sha256sum mismatch"
+  exit 1
+fi
+
+chown -R root:root .
+find -L . \
+ \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
+  -o -perm 511 \) -exec chmod 755 {} \; -o \
+ \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
+  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+
+
+# Location for Python site-packages:
+SITEPK=$PKG/opt/python3.12/lib${LIBDIRSUFFIX}/python${BRANCH_VERSION}/site-packages
+# same as above without $PKG
+TOOLSDIR=/opt/python3.12/lib${LIBDIRSUFFIX}/python${BRANCH_VERSION}/site-packages
+
+# Fix python3 path in cgi.py.
+sed -i '1s|^#.*/usr/local/bin/python|#!/opt/python3.12/bin/python3|' Lib/cgi.py
+
+./configure \
+  --prefix=/opt/python3.12 \
+  --libdir=/opt/python3.12/lib${LIBDIRSUFFIX} \
+  --with-platlibdir=lib${LIBDIRSUFFIX} \
+  --mandir=/usr/man \
+  --docdir="$PKG/usr/doc/$PRGNAM-$VERSION" \
+  --enable-ipv6 \
+  --enable-shared \
+  --with-computed-gotos \
+  --enable-optimizations \
+  --with-dbmliborder=gdbm:ndbm \
+  --with-system-expat \
+  --enable-loadable-sqlite-extensions \
+  --without-ensurepip \
+  --with-tzpath=/usr/share/zoneinfo \
+  --build="$ARCH-slackware-linux"
+
+make "$NUMJOBS" || make
+make install DESTDIR="$PKG"
+
+# PEP says we can claim this link:
+( cd "$PKG/opt/python3.12/bin"
+  rm -f python
+  ln -sf "python${BRANCH_VERSION}" python
+  ln -sf "python${BRANCH_VERSION}" python3
+  ln -sf "python${BRANCH_VERSION}" "python3${BRANCH_VERSION}"
+)
+
+# We don't want a large libpython*.a.
+find "$PKG" -name "libpython*.a" -exec rm --verbose "{}" \;
+
+# Make sure we have a non-platform-specific site-packages directory:
+mkdir -p "$PKG/opt/python3.12/lib/python${BRANCH_VERSION}/site-packages"
+
+# We'll install the python-tools under site-packages.
+mkdir -p "$SITEPK"
+cp -a Tools/* "$SITEPK"
+
+# Remove DOS batch/exe files.
+find "$PKG" \( -name '*.exe' -o -name '*.bat' \) -exec rm -f '{}' \+
+
+# Fix permissions on dynamic libraries.
+find "$PKG" -type f -perm 555 -exec chmod 755 '{}' \+
+
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
+  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+
+find "$PKG/usr/man" -type f -exec gzip -9 {} \;
+
+# Install docs.
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a README.rst LICENSE Misc "$PKG/usr/doc/$PRGNAM-$VERSION"
+# Delete stuff that we don't need to package:
+rm -f "$PKG/usr/doc/$PRGNAM-$VERSION/Misc/"{HISTORY,*.in,*.wpr,python.man,svnmap.txt}
+mv "$SITEPK/README" "$PKG/usr/doc/$PRGNAM-$VERSION/README.python-tools"
+( cd "$PKG/usr/doc/$PRGNAM-$VERSION" ; ln -sf "$TOOLSDIR" Tools )
+if [ -e "$CWD/python-$VERSION-docs-html.tar.bz2" ]; then
+  tar xf "$CWD/python-$VERSION-docs-html.tar.bz2"
+  mv "python-$VERSION-docs-html" "$PKG/usr/doc/$PRGNAM-$VERSION/docs-html"
+  chown -R root:root "$PKG/usr/doc/$PRGNAM-$VERSION/docs-html"
+fi
+if [ -e "$CWD/python-$VERSION-docs-text.tar.bz2" ]; then
+  tar xf "$CWD/python-$VERSION-docs-text.tar.bz2"
+  mv "python-$VERSION-docs-text" "$PKG/usr/doc/$PRGNAM-$VERSION/docs-text"
+  chown -R root:root "$PKG/usr/doc/$PRGNAM-$VERSION/docs-text"
+fi
+
+# Fix possible incorrect permissions.
+( cd "$PKG"
+  find . -type d -exec chmod 755 "{}" \+
+  find . -perm 640 -exec chmod 644 "{}" \+
+  find . -perm 750 -exec chmod 755 "{}" \+
+)
+
+cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
+
+mkdir -p "$PKG/install"
+BSPACE=$(printf "%${#PRGNAM}s")
+cat <<EOINS >> "$PKG/install/slack-desc"
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+$BSPACE|-----handy-ruler------------------------------------------------------|
+$PRGNAM: $PRGNAM (object-oriented interpreted programming language, v3)
+$PRGNAM:
+$PRGNAM: Python is an interpreted, interactive, object-oriented programming
+$PRGNAM: language that combines remarkable power with very clear syntax.
+$PRGNAM: This is a new version of the language that is incompatible with the
+$PRGNAM: 2.x line of releases. The language is mostly the same, but many
+$PRGNAM: details, especially how built-in objects like dictionaries and strings
+$PRGNAM: work, have changed considerably, and a lot of deprecated features have
+$PRGNAM: finally been removed. Also, the standard library has been reorganized
+$PRGNAM: in a few prominent places.
+$PRGNAM:
+EOINS
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

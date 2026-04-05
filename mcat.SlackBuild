@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for clipcat
+# Slackware build script for mcat
 
 # Copyright Martin Bångens 2024
 # All rights reserved.
@@ -24,8 +24,8 @@
 
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
-PRGNAM=clipcat
-VERSION=${VERSION:-main} #branch
+PRGNAM=mcat
+VERSION=${VERSION:-v0.4.6}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -38,9 +38,6 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 
-# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
-# the name of the created package would be, and then exit. This information
-# could be useful to other scripts.
 if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
   echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
   exit 0
@@ -73,8 +70,8 @@ rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 rm -rf "$PRGNAM"
-git clone -b "$VERSION" https://github.com/xrelkd/clipcat
-cd clipcat
+git clone -b "$VERSION" https://github.com/Skardyy/mcat
+cd "$PRGNAM"
 VERSION=$(git describe --tags --always | tr '-' '.' | sed -E 's/^v//; s/\.g[0-9a-f]*$//')
 chown -R root:root .
 find -L . \
@@ -85,27 +82,14 @@ find -L . \
 
 mkdir -p completion
 cargo build --release
-binaries=("clipcat-menu" "clipcat-notify" "clipcatctl" "clipcatd")
-for bin in "${binaries[@]}"; do
-    "target/release/$bin" completions bash > "completion/$bin.bash"
-    "target/release/$bin" completions zsh >  "completion/$bin.zsh"
-    "target/release/$bin" completions fish > "completion/$bin.fish"
-done
-
-install -Dm755 -t "$PKG/usr/bin" "${binaries[@]/#/target/release/}"
-for bin in "${binaries[@]}"; do
-    install -Dm644 "completion/$bin.bash" "${PKG}/usr/share/bash-completion/completions/$bin"
-    install -Dm644 "completion/$bin.zsh" "${PKG}/usr/share/zsh/site-functions/_$bin"
-    install -Dm644 "completion/$bin.fish" "${PKG}/usr/share/fish/vendor_completions.d/$bin.fish"
-done
+install -Dm755 "target/release/mcat" "$PKG/usr/bin/mcat"
 
 find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
   | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
 mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-mv LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION"
-
+mv README.md "$PKG/usr/doc/$PRGNAM-$VERSION"
 mkdir -p "$PKG/install"
 BSPACE=$(printf "%${#PRGNAM}s")
 cat <<EOINS >> "$PKG/install/slack-desc"
@@ -117,12 +101,12 @@ cat <<EOINS >> "$PKG/install/slack-desc"
 # customary to leave one space after the ':' except on otherwise blank lines.
 
 $BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (Clipcat clipboard manager)
+$PRGNAM: $PRGNAM (Terminal image, video, and Markdown viewer)
 $PRGNAM:
-$PRGNAM: A clipboard manager written in Rust Programming Language.
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
+$PRGNAM: terminal utility ("cat for everything") designed to display images,
+$PRGNAM: videos, PDFs, DOCX, and Markdown files directly within a command-line
+$PRGNAM: interface. It automatically detects file types, renders Markdown, and
+$PRGNAM: supports inline imaging for terminals like Kitty, iTerm2, and Sixel
 $PRGNAM:
 $PRGNAM:
 $PRGNAM:

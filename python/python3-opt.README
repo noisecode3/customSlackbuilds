@@ -1,0 +1,21 @@
+python3-opt Current python3 on slackware15
+
+Python is an interpreted, interactive, object-oriented programming
+language that combines remarkable power with very clear syntax.
+This is a new version of the language that is incompatible with the
+2.x line of releases. The language is mostly the same, but many
+details, especially how built-in objects like dictionaries and strings
+work, have changed considerably, and a lot of deprecated features have
+finally been removed. Also, the standard library has been reorganized
+in a few prominent places.
+
+Build whit this the package or app that links to python 
+you have to make sure the app links to /opt/python3-opt/lib64
+you can do 'objdump -x app_exe | less' and check the header if it links
+to python. Usually the app need just the binary so you will end up making
+a bash wrapper.
+
+export PATH="/opt/python3.12/bin:$PATH"
+export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
+export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
+

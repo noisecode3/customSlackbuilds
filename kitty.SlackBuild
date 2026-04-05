@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for template
+# Slackware build script for kitty
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -22,10 +22,12 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
-PRGNAM=template
-VERSION=${VERSION:-git} # or tarball source or binary, you would need to set
+PRGNAM=kitty
+VERSION=${VERSION:-0.46.2}
+GIT_SHA=${GIT_SHA:-4483a6c110275d5603e48337ba533a322781efe2}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -38,9 +40,6 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 
-# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
-# the name of the created package would be, and then exit. This information
-# could be useful to other scripts.
 if [ -n "${PRINT_PACKAGE_NAME}" ]; then
   echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
   exit 0
@@ -57,28 +56,53 @@ elif [ "$ARCH" = "i686" ]; then
   SLKCFLAGS="-O2 -march=i686 -mtune=i686"
   LIBDIRSUFFIX=""
 elif [ "$ARCH" = "x86_64" ]; then
-  SLKCFLAGS="-O2 -fPIC"
+  SLKCFLAGS="-O3 -fPIC"
   LIBDIRSUFFIX="64"
 else
-  SLKCFLAGS="-O2"
+  SLKCFLAGS="-O3"
   LIBDIRSUFFIX=""
 fi
+
+if [ ! -x /opt/cairo/lib64/libcairo.so ]; then
+    echo "File not found: /opt/python3.12/bin/python3" >&2
+    exit 1
+fi
+
+if [ ! -x /opt/python3.12/bin/python3 ]; then
+    echo "File not found: /opt/python3.12/bin/python3" >&2
+    exit 1
+fi
+export PATH="/opt/cairo/bin:$PATH"
+export LD_LIBRARY_PATH="/opt/cairo/lib64:$LD_LIBRARY_PATH"
+export PKG_CONFIG_PATH="/opt/cairo/lib64/pkgconfig:$PKG_CONFIG_PATH"
+
+export PATH="/opt/python3.12/bin:$PATH"
+export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
 
 set -e
 
 rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
-rm -rf "$PRGNAM"
-# work for setting both tag and branch
-if [ "$VERSION" != "git" ]; then
-  git clone --depth 1 -b "$VERSION" https://github.com/noisecode3/template
-  cd "$PRGNAM"
-else
-  git clone https://github.com/noisecode3/template
-  cd "$PRGNAM"
-  VERSION=$(git describe --tags --always | tr '-' '.' | cut -d'.' -f1-4)
+
+# untill we can build the documentation we get just the tar cus its all in there
+#rm -rf "$PRGNAM"
+#git clone https://github.com/kovidgoyal/kitty
+#cd "$PRGNAM"
+#git checkout "$GIT_SHA"
+#VERSION=$(git describe --tags --always | tr '-' '.' | cut -d'.' -f1-4)
+
+wget -c "https://github.com/kovidgoyal/kitty/releases/download/v${VERSION}/kitty-${VERSION}.tar.xz"
+
+# Verify the checksum
+if ! echo "e8ea44b13a1c70032a35128a8c4c8c29c90a7cfbe0ad4f6aa2927a057d10f83e  kitty-${VERSION}.tar.xz" | sha256sum -c; then
+  echo "Checksum verified."
 fi
+
+rm -fr "kitty-${VERSION}"
+tar xf "kitty-${VERSION}.tar.xz"
+cd "kitty-${VERSION}"
+
 chown -R root:root .
 find -L . \
  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
@@ -86,77 +110,44 @@ find -L . \
  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
-# patch
-patch1=$(cat <<'EOINS'
---- dmenu-4.9-orig/config.mk	2019-02-02 05:55:02.000000000 -0700
-+++ dmenu-4.9/config.mk	2020-04-19 13:12:15.427727907 -0600
-@@ -4,6 +4,7 @@
- # paths
- PREFIX = /usr/local
- MANPREFIX = $(PREFIX)/share/man
-+LIBDIR = /usr/local/lib
- 
- X11INC = /usr/X11R6/include
- X11LIB = /usr/X11R6/lib
-@@ -20,11 +21,12 @@
- 
- # includes and libs
- INCS = -I$(X11INC) -I$(FREETYPEINC)
--LIBS = -L$(X11LIB) -lX11 $(XINERAMALIBS) $(FREETYPELIBS)
-+LIBS = -L$(LIBDIR) -L$(X11LIB) -lX11 $(XINERAMALIBS) $(FREETYPELIBS)
- 
- # flags
-+OPTS ?= -Os
- CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\" $(XINERAMAFLAGS)
--CFLAGS   = -std=c99 -pedantic -Wall -Os $(INCS) $(CPPFLAGS)
-+CFLAGS   = -std=c99 -pedantic -Wall $(OPTS) $(INCS) $(CPPFLAGS)
- LDFLAGS  = $(LIBS)
- 
- # compiler and linker
+OVERRIDE_CPPFLAGS="$SLKCFLAGS -Wl,-s" \
+OVERRIDE_CFLAGS="$SLKCFLAGS -Wl,-s" \
+  python3 setup.py \
+    --libdir-name lib$LIBDIRSUFFIX \
+    --verbose linux-package \
+    --ignore-compiler-warnings
+
+mkdir -p "$PKG/usr/bin" "$PKG/usr/libexec" "$PKG/usr/share" "$PKG/usr/lib$LIBDIRSUFFIX"
+
+wrapper=$(cat <<'EOINS'
+#!/bin/bash
+export PATH="/opt/cairo/bin:/opt/python3.12/bin:$PATH"
+export LD_LIBRARY_PATH="/opt/cairo/lib64:/opt/python3.12/lib64:$LD_LIBRARY_PATH"
+exec /usr/libexec/kitty "$@"
 EOINS
 )
-echo "$patch1" | patch -p1
+echo "$wrapper" > "$PKG/usr/bin/kitty"
+chown root:root  "$PKG/usr/bin/kitty"
+chmod 0755       "$PKG/usr/bin/kitty"
 
-CFLAGS="$SLKCFLAGS" \
-CXXFLAGS="$SLKCFLAGS" \
-meson setup \
-  --prefix /usr \
-  --libdir /usr/lib$LIBDIRSUFFIX \
-  --mandir /usr/man \
-  --sysconfdir /etc \
-  --localstatedir /var \
-  -Dmans=true \
-  build
-CFLAGS="$SLKCFLAGS" ninja -C build
-DESTDIR=$PKG ninja -C build install
+cp linux-package/bin/kitten "$PKG/usr/libexec"
+ln -sf "../libexec/kitten" "$PKG/usr/bin/kitten"
+cp linux-package/bin/kitty "$PKG/usr/libexec"
+strip --strip-unneeded "$PKG/usr/libexec/kitty"
+cp -a linux-package/share/* "$PKG/usr/share"
+cp -a linux-package/lib*/* "$PKG/usr/lib$LIBDIRSUFFIX"
 
-config=$(cat <<'EOINS'
-some file text
-var1=black
-var2=blue
-
-EOINS
-)
-FILE_NAME="$PKG/etc/prgram/config"
-echo "$config" >> "$FILE_NAME"
-chmod 0755 "$FILE_NAME"
-
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
-  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
-
-find "$PKG/usr/man" -type f -exec gzip -9 {} \;
-while IFS= read -r i; do
-    ln -s "$(readlink "$i").gz" "$i.gz"
-    rm "$i"
-done < <(find "$PKG/usr/man" -type l)
+mv "$PKG/usr/share/man" "$PKG/usr/man"
+gzip "$PKG/usr/man/man"?/*.?
 
 mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a LICENSE README "$PKG/usr/doc/$PRGNAM-$VERSION"
+mv "$PKG/usr/share/doc/$PRGNAM/html" "$PKG/usr/doc/$PRGNAM-$VERSION"
+rm -rf "$PKG/usr/share/doc/"
+find "$PKG/usr/doc/$PRGNAM-$VERSION/html" -type f -empty -delete
+cp -a CHANGELOG* CONTRIBUTING* README* LICENSE* "$PKG/usr/doc/$PRGNAM-$VERSION"
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
 
 mkdir -p "$PKG/install"
-
-# This type of file can conflict with $ from this script, it's best for text 
 BSPACE=$(printf "%${#PRGNAM}s")
 cat <<EOINS >> "$PKG/install/slack-desc"
 # HOW TO EDIT THIS FILE:
@@ -167,28 +158,18 @@ cat <<EOINS >> "$PKG/install/slack-desc"
 # customary to leave one space after the ':' except on otherwise blank lines.
 
 $BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (short text)
+$PRGNAM: $PRGNAM (fast, featureful, GPU-based terminal emulator)
 $PRGNAM:
-$PRGNAM: long text
+$PRGNAM: kitty is a terminal emulator for X11 and Wayland, which offloads the
+$PRGNAM: rendering to the GPU and supports modern terminal features. It also
+$PRGNAM: supports tiling multiple terminal windows without using an extra
+$PRGNAM: program like screen or tmux.
 $PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
+$PRGNAM: Homepage: https://sw.kovidgoyal.net/kitty/
 $PRGNAM:
 $PRGNAM:
 $PRGNAM:
 EOINS
-
-# This type of file good for files with default permissions
-doinst=$(cat <<'EOINS'
-config() {
-if [ -x /usr/bin/update-desktop-database ]; then
-  /usr/bin/update-desktop-database -q usr/share/applications >/dev/null 2>&1
-fi
-EOINS
-)
-echo "$doinst" >> "$PKG/install/doinst.sh"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

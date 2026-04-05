@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Slackware build script for clipcat
+# Slackware build script for ninja-opt
 
-# Copyright Martin Bångens 2024
+# Copyright Martin Bångens Sweden
 # All rights reserved.
 #
 # Redistribution and use of this script, with or without modification, is
@@ -22,10 +22,11 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
-PRGNAM=clipcat
-VERSION=${VERSION:-main} #branch
+PRGNAM=ninja-opt
+VERSION=${VERSION:-v1.13.2}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -38,10 +39,7 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 
-# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
-# the name of the created package would be, and then exit. This information
-# could be useful to other scripts.
-if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
+if [ -n "${PRINT_PACKAGE_NAME}" ]; then
   echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
   exit 0
 fi
@@ -51,60 +49,56 @@ PKG=$TMP/package-$PRGNAM
 OUTPUT=${OUTPUT:-/tmp}
 
 if [ "$ARCH" = "i586" ]; then
-  LIBDIRSUFFIX=""
+  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
+  SLKLDFLAGS=""
 elif [ "$ARCH" = "i686" ]; then
-  LIBDIRSUFFIX=""
+  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
+  SLKLDFLAGS=""
 elif [ "$ARCH" = "x86_64" ]; then
-  LIBDIRSUFFIX="64"
+  SLKCFLAGS="-O2 -fPIC"
+  SLKLDFLAGS="-L/usr/lib64"
 else
-  LIBDIRSUFFIX=""
+  SLKCFLAGS="-O2"
+  SLKLDFLAGS=""
 fi
 
-export PATH="/opt/rust/bin:$PATH"
-if [ -z "$LD_LIBRARY_PATH" ]; then
-  export LD_LIBRARY_PATH="/opt/rust/lib$LIBDIRSUFFIX"
-else
-  export LD_LIBRARY_PATH="/opt/rust/lib$LIBDIRSUFFIX:$LD_LIBRARY_PATH"
-fi
+#export PATH="/opt/python3.12/bin:$PATH"
+#export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
 
 set -e
 
 rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
-rm -rf "$PRGNAM"
-git clone -b "$VERSION" https://github.com/xrelkd/clipcat
-cd clipcat
-VERSION=$(git describe --tags --always | tr '-' '.' | sed -E 's/^v//; s/\.g[0-9a-f]*$//')
+rm -rf ninja
+git clone -b "$VERSION" https://github.com/ninja-build/ninja/
+cd ninja
+VERSION=$(git describe --tags --always | sed 's/^v//')
 chown -R root:root .
 find -L . \
-  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-   -o -perm 511 \) -exec chmod 755 {} \; -o \
-  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+ \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
+  -o -perm 511 \) -exec chmod 755 {} \; -o \
+ \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
+  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
-mkdir -p completion
-cargo build --release
-binaries=("clipcat-menu" "clipcat-notify" "clipcatctl" "clipcatd")
-for bin in "${binaries[@]}"; do
-    "target/release/$bin" completions bash > "completion/$bin.bash"
-    "target/release/$bin" completions zsh >  "completion/$bin.zsh"
-    "target/release/$bin" completions fish > "completion/$bin.fish"
-done
+# Build the program:
+LDFLAGS="$SLKLDFLAGS" \
+CXXFLAGS="$SLKCFLAGS" \
+CFLAGS="$SLKCFLAGS" \
+  python3 configure.py --bootstrap
 
-install -Dm755 -t "$PKG/usr/bin" "${binaries[@]/#/target/release/}"
-for bin in "${binaries[@]}"; do
-    install -Dm644 "completion/$bin.bash" "${PKG}/usr/share/bash-completion/completions/$bin"
-    install -Dm644 "completion/$bin.zsh" "${PKG}/usr/share/zsh/site-functions/_$bin"
-    install -Dm644 "completion/$bin.fish" "${PKG}/usr/share/fish/vendor_completions.d/$bin.fish"
-done
+# Manually install stuff:
+install -D -m0755 ninja "$PKG/opt/ninja/bin/ninja"
+install -D -m0644 misc/bash-completion "$PKG/opt/ninja/share/bash-completion/completions/ninja"
+install -D -m0644 misc/zsh-completion "$PKG/opt/ninja/share/zsh/site-functions/_ninja"
+install -D -m0644 misc/ninja.vim "$PKG/opt/ninja/share/vim/vimfiles/syntax/ninja.vim"
 
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
-  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
+  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
 mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a COPYING "$PKG/usr/doc/$PRGNAM-$VERSION"
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-mv LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION"
 
 mkdir -p "$PKG/install"
 BSPACE=$(printf "%${#PRGNAM}s")
@@ -117,14 +111,14 @@ cat <<EOINS >> "$PKG/install/slack-desc"
 # customary to leave one space after the ':' except on otherwise blank lines.
 
 $BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (Clipcat clipboard manager)
+$PRGNAM: $PRGNAM (build system with a focus on speed)
 $PRGNAM:
-$PRGNAM: A clipboard manager written in Rust Programming Language.
+$PRGNAM: Ninja is a small build system with a focus on speed. It differs from
+$PRGNAM: other build systems in two major respects: it is designed to have its
+$PRGNAM: input files generated by a higher-level build system, and it is
+$PRGNAM: designed to run builds as fast as possible.
 $PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
+$PRGNAM: ninja home: https://ninja-build.org/
 $PRGNAM:
 $PRGNAM:
 $PRGNAM:

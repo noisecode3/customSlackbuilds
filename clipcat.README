@@ -20,12 +20,10 @@ You have to kill the cat if you logout i3 wont do that
 # exit i3 (logs you out of your X session)
 bindsym $mod+Shift+e exec "rofi -dmenu -p 'Exit i3?' -theme-str 'window {width: 8%; height: 6%;}' <<< 'Yes|No' | grep -q 'Yes' && pkill -x clipcatd; i3-msg exit"
 
+bindsym $mod+c exec clipcat-menu
 
 set $launcher-clipboard-insert clipcat-menu insert
 set $launcher-clipboard-remove clipcat-menu remove
-
-bindsym $mod+p exec $launcher-clipboard-insert
-bindsym $mod+o exec $launcher-clipboard-remove
 
 This requires:
 protobuf3 rust-opt

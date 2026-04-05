@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Slackware build script for clipcat
+# Slackware build script for python3-opt-pluggy
 
-# Copyright Martin Bångens 2024
+# Copyright Martin Bångens Sweden
 # All rights reserved.
 #
 # Redistribution and use of this script, with or without modification, is
@@ -24,8 +24,8 @@
 
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
-PRGNAM=clipcat
-VERSION=${VERSION:-main} #branch
+PRGNAM=python3-opt-pluggy
+VERSION=${VERSION:-1.6.0}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -38,10 +38,7 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 
-# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
-# the name of the created package would be, and then exit. This information
-# could be useful to other scripts.
-if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
+if [ -n "${PRINT_PACKAGE_NAME}" ]; then
   echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
   exit 0
 fi
@@ -50,61 +47,39 @@ TMP=${TMP:-/tmp/SBo}
 PKG=$TMP/package-$PRGNAM
 OUTPUT=${OUTPUT:-/tmp}
 
-if [ "$ARCH" = "i586" ]; then
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "i686" ]; then
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "x86_64" ]; then
-  LIBDIRSUFFIX="64"
-else
-  LIBDIRSUFFIX=""
+if [ ! -x /opt/python3.12/bin/python3 ]; then
+    echo "Filen hittades inte: /opt/python3.12/bin/python3" >&2
+    exit 1
 fi
-
-export PATH="/opt/rust/bin:$PATH"
-if [ -z "$LD_LIBRARY_PATH" ]; then
-  export LD_LIBRARY_PATH="/opt/rust/lib$LIBDIRSUFFIX"
-else
-  export LD_LIBRARY_PATH="/opt/rust/lib$LIBDIRSUFFIX:$LD_LIBRARY_PATH"
-fi
+export PATH="/opt/python3.12/bin:$PATH"
+export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
+export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
 
 set -e
 
 rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
-rm -rf "$PRGNAM"
-git clone -b "$VERSION" https://github.com/xrelkd/clipcat
-cd clipcat
-VERSION=$(git describe --tags --always | tr '-' '.' | sed -E 's/^v//; s/\.g[0-9a-f]*$//')
+rm -rf pluggy
+git clone --depth 1 -b "$VERSION" https://github.com/pytest-dev/pluggy
+cd pluggy
+VERSION=$(git describe --tags --always | sed s/v// | tr '-' '.' | cut -d'.' -f1-4)
 chown -R root:root .
 find -L . \
-  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-   -o -perm 511 \) -exec chmod 755 {} \; -o \
-  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+ \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
+  -o -perm 511 \) -exec chmod 755 {} \; -o \
+ \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
+  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
-mkdir -p completion
-cargo build --release
-binaries=("clipcat-menu" "clipcat-notify" "clipcatctl" "clipcatd")
-for bin in "${binaries[@]}"; do
-    "target/release/$bin" completions bash > "completion/$bin.bash"
-    "target/release/$bin" completions zsh >  "completion/$bin.zsh"
-    "target/release/$bin" completions fish > "completion/$bin.fish"
-done
+unshare -n python3 -m build --wheel --no-isolation
+python3 -m installer -d "$PKG" dist/*.whl
 
-install -Dm755 -t "$PKG/usr/bin" "${binaries[@]/#/target/release/}"
-for bin in "${binaries[@]}"; do
-    install -Dm644 "completion/$bin.bash" "${PKG}/usr/share/bash-completion/completions/$bin"
-    install -Dm644 "completion/$bin.zsh" "${PKG}/usr/share/zsh/site-functions/_$bin"
-    install -Dm644 "completion/$bin.fish" "${PKG}/usr/share/fish/vendor_completions.d/$bin.fish"
-done
-
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
-  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
+  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
 mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a LICENSE "$PKG/usr/doc/$PRGNAM-$VERSION"
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-mv LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION"
 
 mkdir -p "$PKG/install"
 BSPACE=$(printf "%${#PRGNAM}s")
@@ -117,12 +92,12 @@ cat <<EOINS >> "$PKG/install/slack-desc"
 # customary to leave one space after the ':' except on otherwise blank lines.
 
 $BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (Clipcat clipboard manager)
+$PRGNAM: $PRGNAM (A minimalist production ready plugin system)
 $PRGNAM:
-$PRGNAM: A clipboard manager written in Rust Programming Language.
+$PRGNAM: pluggy is a minimalist production ready plugin system. It is the
+$PRGNAM: core framework used by the pytest, tox, and devpi projects.
 $PRGNAM:
-$PRGNAM:
-$PRGNAM:
+$PRGNAM: Homepage: https://github.com/pytest-dev/pluggy
 $PRGNAM:
 $PRGNAM:
 $PRGNAM:
