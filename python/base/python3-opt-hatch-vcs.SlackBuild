@@ -64,7 +64,7 @@ cd "$TMP"
 rm -rf hatch-vcs
 git clone https://github.com/ofek/hatch-vcs
 cd hatch-vcs
-git checkout "$GIT_SHA"
+git -c advice.detachedHead=false  checkout "$GIT_SHA"
 
 chown -R root:root .
 find -L . \

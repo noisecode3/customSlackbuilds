@@ -64,7 +64,7 @@ cd "$TMP"
 rm -rf calver
 git clone https://github.com/di/calver
 cd calver
-git checkout "$GIT_SHA"
+git -c advice.detachedHead=false checkout "$GIT_SHA"
 
 chown -R root:root .
 find -L . \
@@ -73,6 +73,7 @@ find -L . \
  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
+echo "Version: $VERSION" > PKG-INFO
 python3 -m build --wheel --no-isolation
 python3 -m installer -d "$PKG" dist/*.whl
 
