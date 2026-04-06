@@ -26,6 +26,7 @@ cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=python3-opt-kiwisolver
 VERSION=${VERSION:-1.4.9}
+GIT_SHA=${GIT_SHA:-}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}

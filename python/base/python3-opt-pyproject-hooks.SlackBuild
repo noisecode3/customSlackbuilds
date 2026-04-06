@@ -25,7 +25,8 @@
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=python3-opt-pyproject-hooks
-VERSION=${VERSION:-v1.2.0}
+VERSION=${VERSION:-1.2.0}
+GIT_SHA=${GIT_SHA:-4b7c6d113fb89b755d762a88712c8a6873cddd47}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -61,9 +62,10 @@ rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 rm -rf pyproject-hooks
-git clone --depth 1 -b "$VERSION" https://github.com/pypa/pyproject-hooks
+git clone https://github.com/pypa/pyproject-hooks
 cd pyproject-hooks
-VERSION=$(git describe --tags --always | tr '-' '.' | sed s/v// | cut -d'.' -f1-4)
+git checkout "$GIT_SHA"
+
 chown -R root:root .
 find -L . \
  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \

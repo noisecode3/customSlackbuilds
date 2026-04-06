@@ -26,6 +26,7 @@ cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=python3-opt-certifi
 VERSION=${VERSION:-2026.02.25}
+GIT_SHA=${GIT_SHA:-}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}

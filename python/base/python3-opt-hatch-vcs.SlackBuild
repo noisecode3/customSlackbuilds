@@ -25,7 +25,8 @@
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=python3-opt-hatch-vcs
-VERSION=${VERSION:-v0.5.0}
+VERSION=${VERSION:-0.5.0}
+GIT_SHA=${GIT_SHA:-dfec2c06defdb4648eb66f6aadf7b57453d732cd}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -61,9 +62,10 @@ rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 rm -rf hatch-vcs
-git clone --depth 1 -b "$VERSION" https://github.com/ofek/hatch-vcs
+git clone https://github.com/ofek/hatch-vcs
 cd hatch-vcs
-VERSION=$(git describe --tags --always | sed s/v// | tr '-' '.' | cut -d'.' -f1-4)
+git checkout "$GIT_SHA"
+
 chown -R root:root .
 find -L . \
  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \

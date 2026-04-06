@@ -26,6 +26,7 @@ cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=python3-opt-packaging
 VERSION=${VERSION:-26.0}
+GIT_SHA=${GIT_SHA:-3b77a26f5a27473ad3b08194d773f325d018a2d0}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -61,9 +62,10 @@ rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 rm -rf packaging
-git clone --depth 1 -b "$VERSION" https://github.com/pypa/packaging
+git clone https://github.com/pypa/packaging
 cd packaging
-VERSION=$(git describe --tags --always | tr '-' '.' | cut -d'.' -f1-4)
+git checkout "$GIT_SHA"
+
 chown -R root:root .
 find -L . \
  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \

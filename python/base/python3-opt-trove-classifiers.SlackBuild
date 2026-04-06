@@ -26,6 +26,7 @@ cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=python3-opt-trove-classifiers
 VERSION=${VERSION:-2026.1.14.14}
+GIT_SHA=${GIT_SHA:-05cc151733645d6fe075147ae47cf5cc11aaa84e}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -61,10 +62,10 @@ rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 rm -rf trove-classifiers
-git clone --depth 1 -b "$VERSION" https://github.com/pypa/trove-classifiers
+git clone https://github.com/pypa/trove-classifiers
 cd trove-classifiers
+git checkout "$GIT_SHA"
 
-VERSION=$(git describe --tags --always | sed s/v// | tr '-' '.' | cut -d'.' -f1-4)
 chown -R root:root .
 find -L . \
  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \

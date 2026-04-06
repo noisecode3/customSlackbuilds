@@ -1,5 +1,7 @@
-python3-opt-flit_core Simplified packaging of Python modules 
-This provides a PEP 517 build backend for packages using Flit. The only public 
-interface is the API specified by PEP 517, at flit_core.buildapi.
+python3-opt-installer Installing from a Python wheel distribution
 
-This requires: python3-opt
+This is a low-level library for installing a Python package from a
+wheel distribution. It provides basic functionality and abstractions
+for handling wheels and installing packages from wheels.
+
+This requires: python3-opt python3-opt-flit_core

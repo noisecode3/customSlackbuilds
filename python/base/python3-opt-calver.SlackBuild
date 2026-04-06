@@ -26,6 +26,7 @@ cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=python3-opt-calver
 VERSION=${VERSION:-2025.10.20}
+GIT_SHA=${GIT_SHA:-36c6977d6e2d9b9912c2afb83b4e36bb1289dbdd}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -61,9 +62,10 @@ rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 rm -rf calver
-git clone --depth 1 -b "$VERSION" https://github.com/di/calver
+git clone https://github.com/di/calver
 cd calver
-VERSION=$(git describe --tags --always | sed s/v// | tr '-' '.' | cut -d'.' -f1-4)
+git checkout "$GIT_SHA"
+
 chown -R root:root .
 find -L . \
  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \

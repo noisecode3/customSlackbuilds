@@ -25,7 +25,8 @@
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=python3-opt-setuptools-scm
-VERSION=${VERSION:-setuptools-scm-v10.0.5}
+VERSION=${VERSION:-10.0.5}
+GIT_SHA=${GIT_SHA:-e2ba34f52b5d375d680c069bc3fa89c4056a9347}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -61,9 +62,10 @@ rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 rm -rf setuptools-scm
-git clone --depth 1 -b "$VERSION" https://github.com/pypa/setuptools-scm
+git clone https://github.com/pypa/setuptools-scm
 cd setuptools-scm
-VERSION=$(git describe --tags --always | sed 's/setuptools-scm-v//' | tr '-' '.' | cut -d'.' -f1-4)
+git checkout "$GIT_SHA"
+
 chown -R root:root .
 find -L . \
  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \

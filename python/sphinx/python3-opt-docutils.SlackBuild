@@ -26,6 +26,7 @@ cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=python3-opt-docutils
 VERSION=${VERSION:-0.22.4}
+GIT_VERSION=${GIT_VERSION:-0.22.5b1.dev}
 GIT_SHA=${GIT_SHA:-dfb92725cb0dd4a1334209fcb9366dee39d1013d}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
@@ -73,6 +74,8 @@ find -L . \
   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
 cd docutils
+
+grep -rl "$GIT_VERSION" . | xargs sed -i "s/${GIT_VERSION}/${VERSION}/g"
 
 unshare -n python3 -m build --wheel --no-isolation
 python3 -m installer -d "$PKG" dist/*.whl
