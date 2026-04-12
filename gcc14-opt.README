@@ -1,0 +1,11 @@
+gcc14 adds C23 to Slackware
+
+This is a minimal gcc14 with only C language. This adds new C23 specifically to
+gcc minimal simple clean build. It might conflict with gcc14 from slackbuilds.org. 
+
+There is no source file but you can simply add
+
+export CC=/opt/gcc14/bin/gcc
+export PATH=/opt/gcc14/bin:$PATH"
+# this one might be need for the app after you built it
+export LD_LIBRARY_PATH="/opt/gcc14/lib64:$LD_LIBRARY_PATH"

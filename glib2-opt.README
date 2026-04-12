@@ -1,0 +1,8 @@
+glib2-opt Low level core library - development tools
+
+The GLib package contains low-level libraries useful for providing data
+structure handling for C, portability wrappers and interfaces for runtime
+functionality such as an event loop, threads, dynamic loading and an object
+system.
+
+This requires: ninja-opt meson-opt

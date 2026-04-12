@@ -1,0 +1,13 @@
+zathura PDF viewer focusing on keyboard interaction
+
+zathura is a highly customizable and functional PDF viewer based on
+the poppler rendering library and the gtk+ toolkit. The idea behind
+zathura is an application that provides a minimalistic and space
+saving interface as well as an easy usage that mainly focuses on
+keyboard interaction.
+
+When upgrading zathura, you must rebuild all its plugins
+against the new version of zathura, even if the version numbers
+are the same.
+
+This requires: gcc14-opt girara
