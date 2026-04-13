@@ -27,44 +27,19 @@ cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=kitty
 VERSION=${VERSION:-0.46.2}
-GIT_SHA=${GIT_SHA:-4483a6c110275d5603e48337ba533a322781efe2}
+#GIT_SHA=${GIT_SHA:-4483a6c110275d5603e48337ba533a322781efe2}
+#GIT_URL=https://github.com/kovidgoyal/kitty
+TAR_SHA=${TAR_SHA:-e8ea44b13a1c70032a35128a8c4c8c29c90a7cfbe0ad4f6aa2927a057d10f83e}
+TAR_URL=https://github.com/kovidgoyal/kitty/releases/download/v${VERSION}/kitty-${VERSION}.tar.xz
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
-if [ -z "$ARCH" ]; then
-  case "$( uname -m )" in
-    i?86) ARCH=i586 ;;
-    arm*) ARCH=arm ;;
-       *) ARCH=$( uname -m ) ;;
-  esac
-fi
-
-if [ -n "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
-TMP=${TMP:-/tmp/SBo}
-PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
-
-if [ "$ARCH" = "i586" ]; then
-  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "i686" ]; then
-  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "x86_64" ]; then
-  SLKCFLAGS="-O3 -fPIC"
-  LIBDIRSUFFIX="64"
-else
-  SLKCFLAGS="-O3"
-  LIBDIRSUFFIX=""
-fi
+# shellcheck disable=SC1091
+source bash_funktions
 
 if [ ! -x /opt/cairo/lib64/libcairo.so ]; then
-    echo "File not found: /opt/python3.12/bin/python3" >&2
+    echo "File not found: /opt/cairo/lib64/libcairo.so" >&2
     exit 1
 fi
 
@@ -81,39 +56,13 @@ export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
 
 set -e
 
-rm -rf "$PKG"
-mkdir -p "$TMP" "$PKG" "$OUTPUT"
-cd "$TMP"
-
-# untill we can build the documentation we get just the tar cus its all in there
-#rm -rf "$PRGNAM"
-#git clone https://github.com/kovidgoyal/kitty
-#cd "$PRGNAM"
-#git checkout "$GIT_SHA"
-#VERSION=$(git describe --tags --always | tr '-' '.' | cut -d'.' -f1-4)
-
-wget -c "https://github.com/kovidgoyal/kitty/releases/download/v${VERSION}/kitty-${VERSION}.tar.xz"
-
-# Verify the checksum
-if ! echo "e8ea44b13a1c70032a35128a8c4c8c29c90a7cfbe0ad4f6aa2927a057d10f83e  kitty-${VERSION}.tar.xz" | sha256sum -c; then
-  echo "Checksum verified."
-fi
-
-rm -fr "kitty-${VERSION}"
-tar xf "kitty-${VERSION}.tar.xz"
-cd "kitty-${VERSION}"
-
-chown -R root:root .
-find -L . \
- \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-  -o -perm 511 \) -exec chmod 755 {} \; -o \
- \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+prepare_tar_source "$TAR_URL" "$TAR_SHA"
+set_permissions
 
 OVERRIDE_CPPFLAGS="$SLKCFLAGS -Wl,-s" \
 OVERRIDE_CFLAGS="$SLKCFLAGS -Wl,-s" \
   python3 setup.py \
-    --libdir-name lib$LIBDIRSUFFIX \
+    --libdir-name "lib${LIBDIRSUFFIX}" \
     --verbose linux-package \
     --ignore-compiler-warnings
 

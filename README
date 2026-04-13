@@ -1,2 +1,4 @@
 slackbuilds that use git. There will only be 2 files per build. package.README and package.SlackBuild
 all package must pass sbopkglint
+
+They must run next to bash_funktions file.
