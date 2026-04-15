@@ -26,7 +26,7 @@ cd "$(dirname "$0")" ; CWD=$(pwd)
 
 PRGNAM=python3-opt-beautifulsoup4
 VERSION=${VERSION:-4.14.3}
-TAR_SHA256=${TAR_SHA256:-}
+TAR_SHA256=${TAR_SHA256:-6292b1c5186d356bba669ef9f7f051757099565ad9ada5dd630bd9de5fa7fb86}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -65,7 +65,7 @@ cd "$TMP"
 wget -c "https://www.crummy.com/software/BeautifulSoup/bs4/download/${VERSION%.*}/beautifulsoup4-${VERSION}.tar.gz"
 
 # Verify the checksum
-if ! echo "${TAR_SHA256}  beautifulsoup4-${VERSION}.tar.xz" | sha256sum -c; then
+if ! echo "${TAR_SHA256}  beautifulsoup4-${VERSION}.tar.gz" | sha256sum -c; then
   echo "Checksum faild"
   exit 1
 fi

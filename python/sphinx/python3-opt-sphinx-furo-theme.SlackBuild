@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for python3-opt-typing_extensions
+# Slackware build script for python3-opt-sphinx-furo-theme
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -24,10 +24,10 @@
 
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
-PRGNAM=python3-opt-typing_extensions
-VERSION=${VERSION:-4.15.0}
-GIT_SHA=${TAR_SHA:-9d1637e264b5c1a6b7acee3e907015f89b20c2c9}
-GIT_URL=https://github.com/python/typing_extensions
+PRGNAM=python3-opt-sphinx-furo-theme
+VERSION=${VERSION:-2025.12.19}
+GIT_SHA=${GIT_SHA:-dd9e9f920494f24b9b8dd954ec9d07e0b9d12817}
+GIT_URL=https://github.com/pradyunsg/furo
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -39,6 +39,7 @@ if [ ! -x /opt/python3.12/bin/python3 ]; then
     echo "Filen hittades inte: /opt/python3.12/bin/python3" >&2
     exit 1
 fi
+
 export PATH="/opt/python3.12/bin:$PATH"
 export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
 export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
@@ -48,7 +49,11 @@ set -e
 prepare_git_source "$GIT_URL" "$GIT_SHA"
 set_permissions
 
-unshare -n python3 -m build --wheel --no-isolation
+sed -i 's/"sphinx-theme-builder[^"]*",\?//g' pyproject.toml
+sed -i "s/18.20.5/$(node -v | sed s/v//)/" pyproject.toml
+
+export STB_USE_SYSTEM_NODE=true
+python3 -m build --wheel --no-isolation
 python3 -m installer -d "$PKG" dist/*.whl
 
 find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
@@ -58,11 +63,13 @@ mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
 cp -a LICENSE "$PKG/usr/doc/$PRGNAM-$VERSION"
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
 
+#   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \
-    "$PRGNAM (Backported type hints for Python)" \
-    "typing_extensions complements the standard-library typing module," \
-    "providing runtime support for type hints as specified by PEP 484 and" \
-    "subsequent PEPs." \
+    "$PRGNAM (Customizable documentation theme for Sphinx)" \
+    "Furo is a clean, modern, and highly customizable documentation theme" \
+    "for Sphinx. It is popular for its responsive design, easy navigation," \
+    "and inspiration from other technical documentation themes like" \
+    "mkdocs-material." \
     "" \
     "Homepage: https://github.com/python/typing_extensions"
 

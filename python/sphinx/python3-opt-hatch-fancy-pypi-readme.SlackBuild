@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for python3-opt-typing_extensions
+# Slackware build script for python3-opt-hatch-fancy-pypi-readme
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -24,10 +24,10 @@
 
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
-PRGNAM=python3-opt-typing_extensions
-VERSION=${VERSION:-4.15.0}
-GIT_SHA=${TAR_SHA:-9d1637e264b5c1a6b7acee3e907015f89b20c2c9}
-GIT_URL=https://github.com/python/typing_extensions
+PRGNAM=python3-opt-hatch-fancy-pypi-readme
+VERSION=${VERSION:-25.1.0}
+GIT_SHA=${GIT_SHA:-8d7b82ce008390d7725c32e064aed8be26ab1cac}
+GIT_URL="https://github.com/hynek/hatch-fancy-pypi-readme"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -39,6 +39,7 @@ if [ ! -x /opt/python3.12/bin/python3 ]; then
     echo "Filen hittades inte: /opt/python3.12/bin/python3" >&2
     exit 1
 fi
+
 export PATH="/opt/python3.12/bin:$PATH"
 export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
 export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
@@ -55,16 +56,20 @@ find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
   | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
 mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a LICENSE "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a LICENSE.txt "$PKG/usr/doc/$PRGNAM-$VERSION"
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
 
+#   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \
-    "$PRGNAM (Backported type hints for Python)" \
-    "typing_extensions complements the standard-library typing module," \
-    "providing runtime support for type hints as specified by PEP 484 and" \
-    "subsequent PEPs." \
+    "$PRGNAM (Fancy PyPI READMEs with Hatch)" \
+    "hatch-fancy-pypi-readme is a Hatch metadata plugin for everyone who" \
+    "cares about the first impression of their project’s PyPI landing page." \
+    "It allows you to define your PyPI project description in terms of" \
+    "concatenated fragments that are based on static strings, files, and" \
+    "most importantly: parts of files defined using cut-off points or" \
+    "regular expressions." \
     "" \
-    "Homepage: https://github.com/python/typing_extensions"
+    "Homepage: https://github.com/hynek/hatch-fancy-pypi-readme"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for python3-opt-typing_extensions
+# Slackware build script for python3-opt-rich
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -24,10 +24,10 @@
 
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
-PRGNAM=python3-opt-typing_extensions
-VERSION=${VERSION:-4.15.0}
-GIT_SHA=${TAR_SHA:-9d1637e264b5c1a6b7acee3e907015f89b20c2c9}
-GIT_URL=https://github.com/python/typing_extensions
+PRGNAM=python3-opt-rich
+VERSION=${VERSION:-15.0.0}
+GIT_SHA=${GIT_SHA:-6ac483cbea39cab124dfd3483bba70ffafb71050}
+GIT_URL=https://github.com/Textualize/rich
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -39,6 +39,7 @@ if [ ! -x /opt/python3.12/bin/python3 ]; then
     echo "Filen hittades inte: /opt/python3.12/bin/python3" >&2
     exit 1
 fi
+
 export PATH="/opt/python3.12/bin:$PATH"
 export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
 export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
@@ -58,13 +59,17 @@ mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
 cp -a LICENSE "$PKG/usr/doc/$PRGNAM-$VERSION"
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
 
+#   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \
-    "$PRGNAM (Backported type hints for Python)" \
-    "typing_extensions complements the standard-library typing module," \
-    "providing runtime support for type hints as specified by PEP 484 and" \
-    "subsequent PEPs." \
+    "$PRGNAM (rich text and beautiful formatting in the terminal)" \
+    "Rich is a Python library for rich text and beautiful formatting in the" \
+    "terminal." \
     "" \
-    "Homepage: https://github.com/python/typing_extensions"
+    "The Rich API makes it easy to add color and style to terminal output." \
+    "Rich can also render pretty tables, progress bars, markdown, syntax" \
+    "highlighted source code, tracebacks, and more - out of the box." \
+    "" \
+    "Homepage: https://github.com/Textualize/rich"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

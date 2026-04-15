@@ -75,3 +75,40 @@ set_permissions () {
     \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
     -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 }
+
+write_slack_desc() {
+    local pkg="$1"
+    local pkgname="$2"
+    local summary="$3"
+    shift 3
+    local desc_lines=("$@")
+
+    local bspace
+    bspace=$(printf "%${#pkgname}s")
+
+    mkdir -p "$pkg/install"
+
+    {
+        cat <<EOF
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+$bspace|-----handy-ruler------------------------------------------------------|
+$pkgname: $summary
+$pkgname:
+EOF
+        local i
+        for i in "${desc_lines[@]}"; do
+            printf "%s: %s\n" "$pkgname" "$i"
+        done
+
+        # Pad to exactly 11 lines (1 summary + 1 blank + N desc lines)
+        local filled=$(( 2 + ${#desc_lines[@]} ))
+        for (( i=filled; i<11; i++ )); do
+            printf "%s:\n" "$pkgname"
+        done
+    } >> "$pkg/install/slack-desc"
+}

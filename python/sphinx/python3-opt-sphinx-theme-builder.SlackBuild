@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for python3-opt-typing_extensions
+# Slackware build script for python3-opt-sphinx-themebuilder
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -24,10 +24,10 @@
 
 cd "$(dirname "$0")" ; CWD=$(pwd)
 
-PRGNAM=python3-opt-typing_extensions
-VERSION=${VERSION:-4.15.0}
-GIT_SHA=${TAR_SHA:-9d1637e264b5c1a6b7acee3e907015f89b20c2c9}
-GIT_URL=https://github.com/python/typing_extensions
+PRGNAM=python3-opt-sphinx-theme-builder
+VERSION=${VERSION:-0.3.2}
+GIT_SHA=${GIT_SHA:-1deadeb48eb24a4cafd68a995113f8e106352b9c}
+GIT_URL=https://github.com/pradyunsg/sphinx-theme-builder
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -39,6 +39,7 @@ if [ ! -x /opt/python3.12/bin/python3 ]; then
     echo "Filen hittades inte: /opt/python3.12/bin/python3" >&2
     exit 1
 fi
+
 export PATH="/opt/python3.12/bin:$PATH"
 export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
 export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
@@ -58,13 +59,13 @@ mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
 cp -a LICENSE "$PKG/usr/doc/$PRGNAM-$VERSION"
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
 
+#   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \
-    "$PRGNAM (Backported type hints for Python)" \
-    "typing_extensions complements the standard-library typing module," \
-    "providing runtime support for type hints as specified by PEP 484 and" \
-    "subsequent PEPs." \
+    "$PRGNAM (Streamline the Sphinx theme development workflow)" \
+    "Streamline the Sphinx theme development workflow, by building upon" \
+    "existing standardised tools." \
     "" \
-    "Homepage: https://github.com/python/typing_extensions"
+    "Homepage: https://github.com/pradyunsg/sphinx-theme-builder"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
