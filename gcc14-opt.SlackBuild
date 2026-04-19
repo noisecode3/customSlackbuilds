@@ -22,60 +22,23 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd "$(dirname "$0")" ; CWD=$(pwd)
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=gcc14-opt
 VERSION=${VERSION:-14.3.0}
-TAR_SHA256=${TAR_SHA256:-e0dc77297625631ac8e50fa92fffefe899a4eb702592da5c32ef04e2293aca3a}
+TAR_SHA=${TAR_SHA:-e0dc77297625631ac8e50fa92fffefe899a4eb702592da5c32ef04e2293aca3a}
+TAR_URL="https://ftp.gnu.org/gnu/gcc/gcc-${VERSION}/gcc-${VERSION}.tar.xz"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
-if [ -z "$ARCH" ]; then
-  case "$( uname -m )" in
-    i?86) ARCH=i586 ;;
-    arm*) ARCH=arm ;;
-       *) ARCH=$( uname -m ) ;;
-  esac
-fi
-
-if [ -n "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
-TMP=${TMP:-/tmp/SBo}
-PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
-
-if [ "$ARCH" = "i686" ]; then
-  SLKCFLAGS="-O2 -march=pentium4 -mtune=generic"
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "x86_64" ]; then
-  SLKCFLAGS="-O2 -march=x86-64 -mtune=generic -fPIC"
-  LIBDIRSUFFIX="64"
-else
-  SLKCFLAGS="-O2"
-  LIBDIRSUFFIX=""
-fi
+# shellcheck disable=SC1091
+source helpers/bash_funktions
 
 set -e
 
-rm -rf "$PKG"
-mkdir -p "$TMP" "$PKG" "$OUTPUT"
-cd "$TMP"
-
-wget -c "https://ftp.gnu.org/gnu/gcc/gcc-${VERSION}/gcc-${VERSION}.tar.xz"
-# Verify the checksum
-if ! echo "${TAR_SHA256}  gcc-${VERSION}.tar.xz" | sha256sum -c; then
-  echo "Checksum is wrong, baby. Check Yo Self"
-  exit 1
-fi
-
-rm -rf "gcc-${VERSION}"
-tar -xvf "gcc-${VERSION}.tar.xz"
-cd "gcc-${VERSION}"
-
+prepare_tar_source "$TAR_URL" "$TAR_SHA"
 chown -R root:root .
 find . \
   \( -perm 777 -o -perm 775 -o -perm 754 \) \
@@ -87,7 +50,7 @@ CFLAGS="$SLKCFLAGS" \
 CXXFLAGS="$SLKCFLAGS" \
   ./configure \
      --prefix=/opt/gcc14 \
-     --libdir=/opt/gcc14/lib$LIBDIRSUFFIX \
+     --libdir="/opt/gcc14/lib${LIBDIRSUFFIX}" \
      --mandir=/usr/man \
      --infodir=/usr/info \
      --target="$ARCH-slackware-linux" \
@@ -101,8 +64,7 @@ CXXFLAGS="$SLKCFLAGS" \
 make
 make install DESTDIR="$PKG"
 
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
-  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+strip_pkg
 
 mv "$PKG/usr/info/cpp.info" "$PKG/usr/info/cpp14.info"
 mv "$PKG/usr/info/cppinternals.info" "$PKG/usr/info/cppinternals14.info"
@@ -123,36 +85,14 @@ rm "$PKG/usr/man/man7/fsf-funding.7"
 rm "$PKG/usr/man/man7/gfdl.7"
 rm "$PKG/usr/man/man7/gpl.7"
 
-find "$PKG/usr/info" -type f -exec gzip -9 {} \;
-find "$PKG/usr/man" -type f -exec gzip -9 {} \;
+gzip_info
+gzip_man
+install_docs COPYING COPYING3
 
-mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a COPYING COPYING3 "$PKG/usr/doc/$PRGNAM-$VERSION"
-cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-
-mkdir -p "$PKG/install"
-BSPACE=$(printf "%${#PRGNAM}s")
-cat <<EOINS >> "$PKG/install/slack-desc"
-# HOW TO EDIT THIS FILE:
-# The "handy ruler" below makes it easier to edit a package description.
-# Line up the first '|' above the ':' following the base package name, and
-# the '|' on the right side marks the last column you can put a character in.
-# You must make exactly 11 lines for the formatting to be correct.  It's also
-# customary to leave one space after the ':' except on otherwise blank lines.
-
-$BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (GCC package with C23 support)
-$PRGNAM:
-$PRGNAM: This package contains the compiler needed for compile C23.
-$PRGNAM: 
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-EOINS
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (GCC package with C23 support)" \
+    "This package contains the compiler needed for compile C23."
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

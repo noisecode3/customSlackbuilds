@@ -22,79 +22,31 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-cd "$(dirname "$0")" ; CWD=$(pwd)
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=dictd
 VERSION=${VERSION:-1.13.3}
+TAR_SHA=${GIT_SHA:-192129dfb38fa723f48a9586c79c5198fc4904fec1757176917314dd073f1171}
+TAR_URL="https://downloads.sourceforge.net/dict/$PRGNAM-$VERSION.tar.gz"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
-if [ -z "$ARCH" ]; then
-  case "$( uname -m )" in
-    i?86) ARCH=i586 ;;
-    arm*) ARCH=arm ;;
-       *) ARCH=$( uname -m ) ;;
-  esac
-fi
-
-# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
-# the name of the created package would be, and then exit. This information
-# could be useful to other scripts.
-if [ -n "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
-TMP=${TMP:-/tmp/SBo}
-PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
-
-if [ "$ARCH" = "i586" ]; then
-  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "i686" ]; then
-  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "x86_64" ]; then
-  SLKCFLAGS="-O2 -fPIC"
-  LIBDIRSUFFIX="64"
-else
-  SLKCFLAGS="-O2"
-  LIBDIRSUFFIX=""
-fi
+# shellcheck disable=SC1091
+source helpers/bash_funktions
 
 set -e
 
-rm -rf "$PKG"
-mkdir -p "$TMP" "$PKG" "$OUTPUT"
-cd "$TMP"
-rm -rf "$PRGNAM-$VERSION" "$PRGNAM-$VERSION.tar.gz"
-
-wget "https://downloads.sourceforge.net/dict/$PRGNAM-$VERSION.tar.gz"
-SHA256SUM="192129dfb38fa723f48a9586c79c5198fc4904fec1757176917314dd073f1171"
-if echo "$SHA256SUM $PRGNAM-$VERSION.tar.gz" | sha256sum -c; then
-  tar xvf "$TMP/$PRGNAM-$VERSION.tar.gz"
-  cd "$PRGNAM-$VERSION"
-else
-  echo "Download sha256sum mismatch"
-  exit 1
-fi
-
-chown -R root:root .
-find -L . \
- \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-  -o -perm 511 \) -exec chmod 755 {} \; -o \
- \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+prepare_tar_source "$TAR_URL" "$TAR_SHA"
+set_permissions
   
 CFLAGS="$SLKCFLAGS" \
 CXXFLAGS="$SLKCFLAGS" \
 ./configure \
   --prefix=/usr \
   --sysconfdir=/etc/dictd \
-  --libdir=/usr/lib${LIBDIRSUFFIX} \
+  --libdir="/usr/lib${LIBDIRSUFFIX}" \
   --mandir=/usr/man \
   --localstatedir=/var/lib \
   --build="$ARCH-slackware-linux"

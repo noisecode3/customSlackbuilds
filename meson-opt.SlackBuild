@@ -22,93 +22,45 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd "$(dirname "$0")" ; CWD=$(pwd)
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=meson-opt
 VERSION=${VERSION:-1.10.2}
+GIT_SHA=${GIT_SHA:-d4b7efc83b925cbe0f35ce0972baadaad9147431}
+GIT_URL="https://github.com/mesonbuild/meson.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
-if [ -z "$ARCH" ]; then
-  case "$( uname -m )" in
-    i?86) ARCH=i586 ;;
-    arm*) ARCH=arm ;;
-       *) ARCH=$( uname -m ) ;;
-  esac
-fi
+# shellcheck disable=SC1091
+source helpers/bash_funktions
 
-if [ -n "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
-TMP=${TMP:-/tmp/SBo}
-PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
-
-export PATH="/opt/python3.12/bin:$PATH"
-export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
+use_opt_python3
 
 set -e
 
-rm -rf "$PKG"
-mkdir -p "$TMP" "$PKG" "$OUTPUT"
-cd "$TMP"
-rm -rf meson
-if [ "$VERSION" != "git" ]; then
-  git clone --depth 1 -b "$VERSION" https://github.com/mesonbuild/meson
-  cd meson
-else
-  git clone https://github.com/mesonbuild/meson
-  cd meson
-  VERSION=$(git describe --tags --always | tr '-' '.' | cut -d'.' -f1-4)
-fi
-chown -R root:root .
-find -L . \
- \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-  -o -perm 511 \) -exec chmod 755 {} \; -o \
- \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
 
 python3 setup.py install --root="$PKG"
 mkdir -p "$PKG/usr/man/man1"
 mv "$PKG/opt/python3.12/share/man/man1/meson.1" "$PKG/usr/man/man1/meson1.1"
 rm -fr "$PKG/opt/python3.12/share"
 
-find "$PKG/usr/man" -type f -exec gzip -9 {} \;
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
-  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+gzip_man
+strip_pkg
+install_docs COPYING README
 
-mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a COPYING README* \
-  "$PKG/usr/doc/$PRGNAM-$VERSION"
-find "$PKG/usr/doc/$PRGNAM-$VERSION" -type f -exec chmod 0644 {} \+
-cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-
-mkdir -p "$PKG/install"
-BSPACE=$(printf "%${#PRGNAM}s")
-cat <<EOINS >> "$PKG/install/slack-desc"
-# HOW TO EDIT THIS FILE:
-# The "handy ruler" below makes it easier to edit a package description.
-# Line up the first '|' above the ':' following the base package name, and
-# the '|' on the right side marks the last column you can put a character in.
-# You must make exactly 11 lines for the formatting to be correct.  It's also
-# customary to leave one space after the ':' except on otherwise blank lines.
-
-$BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (A high performance build system)
-$PRGNAM:
-$PRGNAM: Meson is a cross-platform build system designed to be both as fast
-$PRGNAM: and as user friendly as possible. It supports many languages and
-$PRGNAM: compilers, including GCC and Clang. Its build definitions are written
-$PRGNAM: in a simple non-turing complete domain specific language.
-$PRGNAM:
-$PRGNAM: Homepage: http://mesonbuild.com/
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-EOINS
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (A high performance build system)" \
+    "Meson is a cross-platform build system designed to be both as fast" \
+    "and as user friendly as possible. It supports many languages and" \
+    "compilers, including GCC and Clang. Its build definitions are written" \
+    "in a simple non-turing complete domain specific language." \
+    "" \
+    "Homepage: http://mesonbuild.com/"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

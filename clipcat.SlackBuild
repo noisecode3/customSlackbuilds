@@ -22,66 +22,27 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd "$(dirname "$0")" ; CWD=$(pwd)
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=clipcat
-VERSION=${VERSION:-main} #branch
+VERSION=${VERSION:-0.25.0}
+GIT_SHA=${GIT_SHA:-cab2d4a54b7f0a3f926ecc5fd2a6b13f176f5eac} # after 0.25.0
+GIT_URL="https://github.com/xrelkd/clipcat.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
-if [ -z "$ARCH" ]; then
-  case "$( uname -m )" in
-    i?86) ARCH=i586 ;;
-    arm*) ARCH=arm ;;
-       *) ARCH=$( uname -m ) ;;
-  esac
-fi
+# shellcheck disable=SC1091
+source helpers/bash_funktions
 
-# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
-# the name of the created package would be, and then exit. This information
-# could be useful to other scripts.
-if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
-TMP=${TMP:-/tmp/SBo}
-PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
-
-if [ "$ARCH" = "i586" ]; then
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "i686" ]; then
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "x86_64" ]; then
-  LIBDIRSUFFIX="64"
-else
-  LIBDIRSUFFIX=""
-fi
-
-export PATH="/opt/rust/bin:$PATH"
-if [ -z "$LD_LIBRARY_PATH" ]; then
-  export LD_LIBRARY_PATH="/opt/rust/lib$LIBDIRSUFFIX"
-else
-  export LD_LIBRARY_PATH="/opt/rust/lib$LIBDIRSUFFIX:$LD_LIBRARY_PATH"
-fi
+use_opt_rust
 
 set -e
 
-rm -rf "$PKG"
-mkdir -p "$TMP" "$PKG" "$OUTPUT"
-cd "$TMP"
-rm -rf "$PRGNAM"
-git clone -b "$VERSION" https://github.com/xrelkd/clipcat
-cd clipcat
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
 VERSION=$(git describe --tags --always | tr '-' '.' | sed -E 's/^v//; s/\.g[0-9a-f]*$//')
-chown -R root:root .
-find -L . \
-  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-   -o -perm 511 \) -exec chmod 755 {} \; -o \
-  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
 mkdir -p completion
 cargo build --release
@@ -99,36 +60,14 @@ for bin in "${binaries[@]}"; do
     install -Dm644 "completion/$bin.fish" "${PKG}/usr/share/fish/vendor_completions.d/$bin.fish"
 done
 
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
-  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+strip_pkg
+install_docs LICENSE README.md
 
-mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-mv LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION"
-
-mkdir -p "$PKG/install"
-BSPACE=$(printf "%${#PRGNAM}s")
-cat <<EOINS >> "$PKG/install/slack-desc"
-# HOW TO EDIT THIS FILE:
-# The "handy ruler" below makes it easier to edit a package description.
-# Line up the first '|' above the ':' following the base package name, and
-# the '|' on the right side marks the last column you can put a character in.
-# You must make exactly 11 lines for the formatting to be correct.  It's also
-# customary to leave one space after the ':' except on otherwise blank lines.
-
-$BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (Clipcat clipboard manager)
-$PRGNAM:
-$PRGNAM: A clipboard manager written in Rust Programming Language.
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-$PRGNAM:
-EOINS
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (Clipcat clipboard manager)" \
+    "A clipboard manager written in Rust Programming Language." \
+    ""
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

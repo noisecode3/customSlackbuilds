@@ -22,71 +22,28 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd "$(dirname "$0")" ; CWD=$(pwd)
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=cairo-opt
 VERSION=${VERSION:-1.18.4}
+GIT_SHA=${GIT_SHA:-4541e0cd3a751b85e52e2a83d02ac6145a5efa85}
+GIT_URL="https://gitlab.freedesktop.org/cairo/cairo.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
-
-if [ -z "$ARCH" ]; then
-  case "$( uname -m )" in
-    i?86) ARCH=i586 ;;
-    arm*) ARCH=arm ;;
-       *) ARCH=$( uname -m ) ;;
-  esac
-fi
-
-if [ -n "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
-TMP=${TMP:-/tmp/SBo}
-PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
-
 NUMJOBS=${NUMJOBS:-"-j$(($(nproc) + 1))"}
 
-if [ "$ARCH" = "i586" ]; then
-  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "i686" ]; then
-  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "x86_64" ]; then
-  SLKCFLAGS="-O2 -fPIC"
-  LIBDIRSUFFIX="64"
-else
-  SLKCFLAGS="-O2"
-  LIBDIRSUFFIX=""
-fi
+# shellcheck disable=SC1091
+source helpers/bash_funktions
 
-export PATH="/opt/ninja/bin/:$PATH"
-export PATH="/opt/python3.12/bin:$PATH"
-export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
-export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
+use_opt_ninja
+use_opt_python3
 
 set -e
 
-rm -rf "$PKG"
-mkdir -p "$TMP" "$PKG" "$OUTPUT"
-cd "$TMP"
-rm -rf cairo
-if [ "$VERSION" != "git" ]; then
-  git clone --depth 1 -b "$VERSION" https://gitlab.freedesktop.org/cairo/cairo.git/
-else
-  git clone https://gitlab.freedesktop.org/cairo/cairo.git/
-  VERSION=$(git describe --tags --always | tr '-' '.' | cut -d'.' -f1-4)
-fi
-cd cairo
-chown -R root:root .
-find -L . \
- \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-  -o -perm 511 \) -exec chmod 755 {} \; -o \
- \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
 
 export CFLAGS="$SLKCFLAGS"
 export CXXFLAGS="$SLKCFLAGS"
@@ -94,7 +51,7 @@ mkdir meson-build
 cd meson-build
 meson setup \
   --prefix=/opt/cairo \
-  --libdir=lib${LIBDIRSUFFIX} \
+  --libdir="lib${LIBDIRSUFFIX}" \
   --libexecdir=/opt/cairo/libexec \
   --bindir=/opt/cairo/bin \
   --sbindir=/opt/cairo/sbin \
@@ -112,39 +69,19 @@ meson setup \
   DESTDIR=$PKG ninja install
 cd ..
 
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
-  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+strip_pkg
+install_docs AUTHORS* BUGS* CODING_STYLE* COPYING* HACKING* NEWS* README*
 
-mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a \
-  AUTHORS* BUGS* CODING_STYLE* COPYING* HACKING* NEWS* README* \
-  "$PKG/usr/doc/$PRGNAM-$VERSION"
-
-cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-
-mkdir -p "$PKG/install"
-BSPACE=$(printf "%${#PRGNAM}s")
-cat <<EOINS >> "$PKG/install/slack-desc"
-# HOW TO EDIT THIS FILE:
-# The "handy ruler" below makes it easier to edit a package description.
-# Line up the first '|' above the ':' following the base package name, and
-# the '|' on the right side marks the last column you can put a character in.
-# You must make exactly 11 lines for the formatting to be correct.  It's also
-# customary to leave one space after the ':' except on otherwise blank lines.
-
-$BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (graphics library used by GTK+)
-$PRGNAM:
-$PRGNAM: Cairo is a vector graphics library designed to provide high-quality
-$PRGNAM: display and print output. Cairo is designed to produce
-$PRGNAM: identical output on all output media while taking advantage of display
-$PRGNAM: hardware acceleration when available (eg. through the X Render
-$PRGNAM: Extension or OpenGL).
-$PRGNAM:
-$PRGNAM: Homepage: https://cairographics.org
-$PRGNAM:
-$PRGNAM:
-EOINS
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (graphics library used by GTK+)" \
+    "Cairo is a vector graphics library designed to provide high-quality" \
+    "display and print output. Cairo is designed to produce" \
+    "identical output on all output media while taking advantage of display" \
+    "hardware acceleration when available (eg. through the X Render" \
+    "Extension or OpenGL)." \
+    "" \
+    "Homepage: https://cairographics.org"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

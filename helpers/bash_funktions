@@ -32,6 +32,61 @@ else
   LIBDIRSUFFIX=""
 fi
 
+gzip_info() {
+    find "$PKG/usr/info" -type f -exec gzip -9 {} \;
+}
+
+gzip_man() {
+    find "$PKG/usr/man" -type f -exec gzip -9 {} \;
+    while IFS= read -r i; do
+        ln -s "$(readlink "$i").gz" "$i.gz"
+        rm "$i"
+    done < <(find "$PKG/usr/man" -type l)
+}
+
+install_docs() {
+    local dest="$PKG/usr/doc/$PRGNAM-$VERSION"
+    mkdir -p "$dest"
+    cp -a "$@" "$dest"
+    cat "$CWD/$PRGNAM.SlackBuild" > "$dest/$PRGNAM.SlackBuild"
+    find "$PKG/usr/doc/$PRGNAM-$VERSION" -type f -exec chmod 0644 {} \+
+}
+
+strip_pkg() {
+    find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
+      | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+}
+
+use_opt_rust() {
+    export PATH="/opt/rust/bin:$PATH"
+    export LD_LIBRARY_PATH="/opt/rust/lib$LIBDIRSUFFIX:$LD_LIBRARY_PATH"
+}
+
+use_opt_glib2() {
+    export PATH="/opt/glib2/bin:$PATH"
+    export LD_LIBRARY_PATH="/opt/glib2/lib64/:$LD_LIBRARY_PATH"
+    export PKG_CONFIG_PATH="/opt/glib2/lib64/pkgconfig:$PKG_CONFIG_PATH"
+}
+
+use_opt_ninja() {
+    export PATH="/opt/ninja/bin/:$PATH"
+}
+
+use_opt_python3() {
+    export PATH="/opt/python3.12/bin:$PATH"
+    export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
+}
+
+use_opt_cairo() {
+    export PATH="/opt/cairo/bin:$PATH"
+    export LD_LIBRARY_PATH="/opt/cairo/lib64:$LD_LIBRARY_PATH"
+    export PKG_CONFIG_PATH="/opt/cairo/lib64/pkgconfig:$PKG_CONFIG_PATH"
+}
+
+use_opt_gcc14() {
+    export PATH="/opt/gcc14/bin:$PATH"
+    export LD_LIBRARY_PATH="/opt/gcc14/lib64:$LD_LIBRARY_PATH"
+}
 
 prepare_directories () {
   rm -rf "$PKG"
@@ -41,6 +96,7 @@ prepare_directories () {
 prepare_git_source () {
   local URL=$1
   local REPO="${URL##*/}"
+  REPO="${REPO%.git}"
   local GIT_SHA=$2
   prepare_directories
   cd "$TMP" || exit 1

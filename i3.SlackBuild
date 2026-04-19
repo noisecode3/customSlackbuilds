@@ -26,75 +26,30 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd "$(dirname "$0")" ; CWD=$(pwd)
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=i3
-VERSION=${VERSION:-git}
+VERSION=${VERSION:-4.25.1}
+GIT_SHA=${GIT_SHA:-12fe799ee7f62eaf30c1d4f5e09c218de20ff5d0} # a bit after 4.25.1
+GIT_URL="https://github.com/i3/i3.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
-if [ -z "$ARCH" ]; then
-  case "$( uname -m )" in
-    i?86) ARCH=i586 ;;
-    arm*) ARCH=arm ;;
-       *) ARCH=$( uname -m ) ;;
-  esac
-fi
-
-# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
-# the name of the created package would be, and then exit. This information
-# could be useful to other scripts.
-if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
-TMP=${TMP:-/tmp/SBo}
-PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
-
-if [ "$ARCH" = "i586" ]; then
-  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "i686" ]; then
-  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
-  LIBDIRSUFFIX=""
-elif [ "$ARCH" = "x86_64" ]; then
-  SLKCFLAGS="-O2 -fPIC"
-  LIBDIRSUFFIX="64"
-else
-  SLKCFLAGS="-O2"
-  LIBDIRSUFFIX=""
-fi
+# shellcheck disable=SC1091
+source helpers/bash_funktions
 
 set -e
 
-rm -rf "$PKG"
-mkdir -p "$TMP" "$PKG" "$OUTPUT"
-cd "$TMP"
-rm -rf $PRGNAM
-if [ "$VERSION" != "git" ]; then
-  git clone --depth 1 -b "$VERSION" https://github.com/i3/i3
-  cd $PRGNAM
-else
-  git clone https://github.com/i3/i3
-  cd $PRGNAM
-  VERSION=$(git describe --tags)
-  VERSION=${VERSION::-10}
-  VERSION=$(echo "$VERSION" | tr '-' . )
-fi
-chown -R root:root .
-find -L . \
- \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-  -o -perm 511 \) -exec chmod 755 {} \; -o \
- \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
-  
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
+ 
+VERSION=$(git describe --tags --always | tr '-' '.' | sed -E 's/^v//; s/\.g[0-9a-f]*$//')
 CFLAGS="$SLKCFLAGS" \
 meson setup \
   --prefix /usr \
-  --libdir /usr/lib$LIBDIRSUFFIX \
+  --libdir "/usr/lib${LIBDIRSUFFIX}" \
   --mandir /usr/man \
   --sysconfdir /etc \
   --localstatedir /var \
@@ -103,15 +58,14 @@ meson setup \
 CFLAGS="$SLKCFLAGS" ninja -C build
 DESTDIR=$PKG ninja -C build install
 
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
-  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+strip_pkg
 
 # Don't clobber the default config
 mv "$PKG/etc/i3/config" "$PKG/etc/i3/config.new"
 mv "$PKG/etc/i3/config.keycodes" "$PKG/etc/i3/config.keycodes.new"
 
 # Make alacritty default terminal
-sed -i 's/i3-sensible-terminal/alacritty/' "$PKG/etc/i3/config.new"
+sed -i 's/i3-sensible-terminal/kitty/' "$PKG/etc/i3/config.new"
 
 # Fix man page permissions
 chmod 0644 "$PKG/usr/man/man1/"*
@@ -168,42 +122,23 @@ find "$PKG" \( -name perllocal.pod -o -name ".packlist" -o -name "*.bs" \) -dele
 mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION/AnyEvent-I3"
 cp -a Changes README MANIFEST "$PKG/usr/doc/$PRGNAM-$VERSION/AnyEvent-I3/"
 
-# man pages
-
-
-find "$PKG/usr/man" -type f -exec gzip -9 {} \;
-while IFS= read -r i; do
-    ln -s "$(readlink "$i").gz" "$i.gz"
-    rm "$i"
-done < <(find "$PKG/usr/man" -type l)
-
+gzip_man
 
 find "$PKG" -depth -type d -empty -delete || true
 
 cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
 
-mkdir -p "$PKG/install"
-cat <<EOINS >> "$PKG/install/slack-desc"
-# HOW TO EDIT THIS FILE:
-# The "handy ruler" below makes it easier to edit a package description.
-# Line up the first '|' above the ':' following the base package name, and
-# the '|' on the right side marks the last column you can put a character in.
-# You must make exactly 11 lines for the formatting to be correct.  It's also
-# customary to leave one space after the ':' except on otherwise blank lines.
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (an improved dynamic tiling window manager)" \
+    "i3 is a tiling window manager, completely written from scratch." \
+    "i3 was created because wmii, our favorite window manager at the time," \
+    "didn't provide some features we wanted (multi-monitor done right," \
+    "for example), had some bugs, didn't progress since quite some time" \
+    "and wasn't easy to hack at all (source code comments/documentation" \
+    "completely lacking). Still, we think the wmii developers and" \
+    "contributors did a great job."
 
-  |-----handy-ruler------------------------------------------------------|
-i3: i3 (an improved dynamic tiling window manager)
-i3:
-i3: i3 is a tiling window manager, completely written from scratch.
-i3:
-i3: i3 was created because wmii, our favorite window manager at the time,
-i3: didn't provide some features we wanted (multi-monitor done right,
-i3: for example), had some bugs, didn't progress since quite some time
-i3: and wasn't easy to hack at all (source code comments/documentation
-i3: completely lacking). Still, we think the wmii developers and
-i3: contributors did a great job.
-i3:
-EOINS
 doinst=$(cat <<'EOINS'
 config() {
   NEW="$1"

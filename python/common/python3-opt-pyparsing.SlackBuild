@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for zathura
+# Slackware build script for python3-opt-pyparsing
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -25,63 +25,37 @@
 # shellcheck disable=SC2034
 cd "$(dirname "$0")"; CWD=$(pwd)
 
-PRGNAM=zathura
-VERSION=${VERSION:-2026.03.27}
-GIT_SHA=${GIT_SHA:-d643315fa3239c1671cdb41e454e56a9d81c6f54}
-GIT_URL="https://github.com/pwmt/zathura.git"
+PRGNAM=python3-opt-pyparsing
+VERSION=${VERSION:-3.3.2}
+GIT_SHA=${GIT_SHA:-fa24016d953353f8ba566abb5c8fc12e1d07556c}
+GIT_URL=https://github.com/pyparsing/pyparsing
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
 # shellcheck disable=SC1091
-source helpers/bash_funktions
+source ./helpers/bash_funktions
 
-use_opt_ninja
-use_opt_glib2
-use_opt_gcc14
+use_opt_python3
 
 set -e
 
 prepare_git_source "$GIT_URL" "$GIT_SHA"
 set_permissions
 
-CC=/opt/gcc14/bin/gcc \
-CFLAGS="$SLKCFLAGS" \
-CXXFLAGS="$SLKCFLAGS" \
-meson setup \
-  --prefix /usr \
-  --libdir "/usr/lib${LIBDIRSUFFIX}" \
-  --mandir /usr/man \
-  --sysconfdir /etc \
-  --localstatedir /var \
-  build
-CFLAGS="$SLKCFLAGS" ninja -C build
-DESTDIR=$PKG ninja -C build install
-
-mkdir "$PKG/usr/libexec/"
-mv "$PKG/usr/bin/zathura" "$PKG/usr/libexec/"
-wrapper=$(cat <<'EOINS'
-#!/bin/bash
-export LD_LIBRARY_PATH="/opt/glib2/lib64/:/opt/gcc14/lib64:$LD_LIBRARY_PATH"
-exec /usr/libexec/zathura "$@"
-EOINS
-)
-echo "$wrapper" > "$PKG/usr/bin/zathura"
-chown root:root  "$PKG/usr/bin/zathura"
-chmod 0755       "$PKG/usr/bin/zathura"
+unshare -n python3 -m build --wheel --no-isolation
+python3 -m installer -d "$PKG" dist/*.whl
 
 strip_pkg
-install_docs LICENSE README.md
+install_docs LICENSE
 
 #   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \
-    "$PRGNAM (a PDF viewer focusing on keyboard interaction)" \
-    "zathura is a highly customizable and functional PDF viewer based on" \
-    "the poppler rendering library and the gtk+ toolkit. The idea behind" \
-    "zathura is an application that provides a minimalistic and space" \
-    "saving interface as well as an easy usage that mainly focuses on" \
-    "keyboard interaction." \
-    ""
+    "$PRGNAM (A modernised skeleton for Sphinx themes)" \
+    "A modern base for Sphinx themes, providing shared implementation of" \
+    " common components and a three-column layout to build upon." \
+    "" \
+    "Homepage: https://github.com/pradyunsg/sphinx-basic-ng"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
