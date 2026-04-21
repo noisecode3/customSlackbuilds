@@ -1,19 +1,26 @@
-pkg short description
+cairo-opt 2D graphics library
 
-Ein zwei drei vier, lest go insane here.
-Bla bla bla bla blababl bla bla bla bla
-bla bla bla bla bla bla bla bla. Blabla
-bla bla bla bla. Bla blala bla bla bla bla
-bla bla bla bla blababl. Bla bla bla bla
-Don't go over 80 chars----------------------------Don't be dirty----------------
-
+Cairo is a 2D graphics library with support for multiple output devices.
+Currently supported output targets include the X Window System (via both
+Xlib and XCB), quartz, win32, and image buffers, as well as PDF, PostScript,
+and SVG file output. Cairo is designed to produce consistent output on all
+output media while taking advantage of display hardware acceleration when
+available (for example, through the X Render Extension).
+The cairo API provides operations similar to the drawing operators of PostScript
+and PDF. Operations in cairo include stroking and filling cubic Bézier splines,
+transforming and compositing translucent images, and antialiased text rendering.
+All drawing operations can be transformed by any affine transformation (scale,
+rotation, shear, etc.).
+Cairo has been designed to let you draw anything you want in a modern 2D
+graphical user interface.  At the same time, the cairo API has been designed to
+be as fun and easy to learn as possible. If you're not having fun while
+programming with cairo, then we have failed somewhere---let us know and we'll
+try to fix it next time around.
 
 add to you project /opt/cairo/include/
 export PKG_CONFIG_PATH="/opt/cairo/lib64/pkgconfig:$PKG_CONFIG_PATH"
 
-
 export PATH="/opt/cairo/bin:$PATH"
 export LD_LIBRARY_PATH="/opt/cairo/lib64:$LD_LIBRARY_PATH"
 
-pkg is optional, for this feature bla bla
-This requires: pkg1, pkg2, pkg3
+This requires: ninja-opt meson-opt

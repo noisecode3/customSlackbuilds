@@ -25,31 +25,20 @@
 # shellcheck disable=SC2034
 cd "$(dirname "$0")" || exit 1; CWD=$(pwd)
 
-PRGNAM=nordvpn-bin
-VERSION=${VERSION:-4.5.0}
-BUILD=${BUILD:-1}
-TAG=${TAG:-_SBo}
-PKGTYPE=${PKGTYPE:-tgz}
+# we are a bit extra careful we don't let those get changed
+# and we analyze every update, for changes
+PRGNAM="nordvpn-bin"
+VERSION="4.6.0"
+TAR_URL="https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/nordvpn_${VERSION}_amd64.deb"
+BUILD="1"
+TAG="_SBo"
+PKGTYPE="tgz"
 
 # Select nordvpn's default group
 NORD_GROUP=${NORD_GROUP:-nordvpn}
 
-if [ -z "$ARCH" ]; then
-  case "$( uname -m )" in
-    i?86) ARCH=i586 ;;
-    arm*) ARCH=arm ;;
-       *) ARCH=$( uname -m ) ;;
-  esac
-fi
-
-if [ -n "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
-TMP=${TMP:-/tmp/SBo}
-PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
+# shellcheck disable=SC1091
+source helpers/bash_funktions
 
 set -e
 
@@ -76,11 +65,71 @@ rm -rf "$PKG"
 mkdir -p "$TMP" "$PKG" "$OUTPUT"
 cd "$TMP"
 
+# public key inline
+GNUPGHOME=$(mktemp -d)
+gpg --homedir "$GNUPGHOME" --import <<'EOF'
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mQINBFtitP8BEAC0HWDIEp5az0WNda1LSgiVjiixdpzT8tFgohcrgkIr5MzhF0u8
+nXl7Z8ZH5oJubgVhQesMvb4nAfN+8onb2+ml6n0Yl+IUy1dTbFh/ehAZgy1FCWYe
+DdUy34Q6qAv0wiwGNdRiL588eDfGWPtF4AmEackCfWjk2WJrKVFeWMfLhmD+Pch+
+3ZztkO6Pm8P2VJ3tIxs1On/w+rzjDhQNLNRCA5Otf93yhLAbLz8ToNNNr2R2CFcs
+msXVCFinhwFC5CSLg7DdFf8z7xyu+zugqtqdopFXGEam3sWPZhVCVLZY68rPRP5w
+1iadYxzsgTIGAxqWMGjbXgRQZLUuWaiwddLYMuK+ZDDkqs7X3CHeYtWl1ITwKtLs
+DbHJtvWjcZ08P5OY13Jym2yAc6LphB64ZAhzS8QOfi4sy7ZvTIeIcDfnZ2Gn1sRx
+rSJ3ENJ+FJP9zEbMRSkb2H1TQIwN8qhVpY/KbiyLcPZ1tEtc7t4Ip6haRVPjQi0N
+wacynhFE5dMxzjEdcdzcd0P+/AjkiMt3M8EuSk/CPvZOZJz02YGPSIang423sQcH
+P2TFAxXC9ZEerj2RmjhBdkfKcOAi4W2k1MTL6xOPgJSWnnYzlTOr1gzgwxYjybed
+S9pkUG23f3RzcnImToi+SMQc0c22SQ6herL21TzK+Bq4VKpn6ckPs+V4OQARAQAB
+tBtOb3JkVlBOIDxhZG1pbkBub3JkdnBuLmNvbT6JAjcEEwEIACECGwMFCwkIBwMF
+FQoJCAsFFgIDAQACHgECF4AFAltixmcACgkQayGeU1yWTKHpqg/+NQPtGP7OOhmJ
+ac0FEuDNjJOZDGYwe65IrzYHDytsli1qVcCpfEs337y9br2d+0cUhl2EiNFVxf7T
+JPW/w5dclK8+CLzqn9Gk9NgCWkSJDTlnjVsDlQQejUGBuIIf91iUAtNmqdVpCzxF
+/YGqLr1F8WtctS+xb8miM/TgwEyRRXiZ1PLEYqP8q4oaeosZ3T8qJTOKz8D0XQsf
+3B2iLP6U7vQLBoG0fpxVmJAb4IB8MUf9XpG3g5skzapO0kVqxAEomL2kwUwEIUES
+MouVQGiJW9F2/KE0aYbaGNNbhkW0rc++TzflC9+ffjRv5gz95VwyVKqzbRIJKW5l
+tidTqbA25ICXzU6xXFGpzgVVg7Q/S7k7hq5fxnWZmgM/z8zZfCCEMC/sHZt6GkAv
+eBGkd13z143qPW5FrvCrAkbO/TTwv08Zef2+ElzzMt47Nuce4HQ7PcCe58IQa+l0
+uQoAJZT4qnBcUGkjRiv1eubUskMTxvb5G6JSwVZaceEWrgMan+u01B+3iLUN8oWx
+BH98V1aeXdCMWcW01SGgFiyicrMItnhpOHiV3bG9d03D4uyf1l+PG3N6g9ARWYtd
+wuKpKeJZcxryqw8nKtFsKaoKVp0HVjgQjxItqoFMQfHwqw6T+vx8VLUn+5zJKcv4
+Us2cA5yPXcclKdM3myHYkyKJDrRk01w=
+=xBsv
+-----END PGP PUBLIC KEY BLOCK-----
+EOF
+
+RELEASE=$(curl -s https://repo.nordvpn.com/deb/nordvpn/debian/dists/stable/Release)
+SIG=$(curl -s https://repo.nordvpn.com/deb/nordvpn/debian/dists/stable/Release.gpg)
+gpg --homedir "$GNUPGHOME" --trust-model always --verify <(echo "$SIG") <(echo "$RELEASE")
+PKG_HASH=$(awk '
+/^SHA256:/ {inblock=1; next}
+/^SHA512:/ {inblock=0}
+inblock && /main\/binary-amd64\/Packages$/ {print $1; exit}
+' <(printf "%s" "$RELEASE"))
+
+echo "$PKG_HASH"
+
+curl -s https://repo.nordvpn.com/deb/nordvpn/debian/dists/stable/main/binary-amd64/Packages -o "$GNUPGHOME/Packages"
+PACKAGES_CALC_HASH=$(sha256sum "$GNUPGHOME/Packages" | awk '{print $1}')
+echo "$PACKAGES_CALC_HASH"
+if [ "$PACKAGES_CALC_HASH" = "$PKG_HASH" ]; then
+  echo "Packages file OK"
+else
+  echo "Packages file FAIL"
+  exit 1
+fi
+TAR_SHA=$(cat "$GNUPGHOME/Packages" \
+  | awk -v file="nordvpn_${VERSION}_amd64.deb" '
+      /^SHA256:/ { sha=$2 }
+      /^Filename:/ && index($0, file) { print sha; exit }
+    ')
+
+rm -rf "$GNUPGHOME"
 rm -f "nordvpn_${VERSION}_amd64.deb"
-wget --trust-server-names "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/nordvpn_${VERSION}_amd64.deb"
+wget --trust-server-names "$TAR_URL"
 
 # Verify the checksum
-if echo "6de9093b384b1b016c611b8f6a000dc1476ec82b9f694e17a093f05a8067891f  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
+if echo "${TAR_SHA}  nordvpn_${VERSION}_amd64.deb" | sha256sum -c; then
   echo "Checksum verified."
 
   # Extract the data.tar.gz file

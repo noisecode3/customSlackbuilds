@@ -1,0 +1,7 @@
+python3-opt-build, correct PEP517 package builder.
+
+build manages pyproject.toml-based builds, invoking build-backend hooks as
+appropriate to build a distribution package. It is a simple build tool and does
+not perform any dependency management.
+
+This requires: python3-opt-pyproject-hooks

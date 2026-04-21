@@ -36,9 +36,6 @@ PKGTYPE=${PKGTYPE:-tgz}
 # shellcheck disable=SC1091
 source helpers/bash_funktions
 
-use_opt_ninja
-use_opt_python3
-
 set -e
 
 prepare_git_source "$GIT_URL" "$GIT_SHA"
