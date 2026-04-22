@@ -1,11 +1,11 @@
-pkg short description
+python3-opt-pyproject-hooks (Wrappers to call PEP 517 build backend hooks)
 
-Ein zwei drei vier, lest go insane here.
-Bla bla bla bla blababl bla bla bla bla
-bla bla bla bla bla bla bla bla. Blabla
-bla bla bla bla. Bla blala bla bla bla bla
-bla bla bla bla blababl. Bla bla bla bla
-Don't go over 80 chars----------------------------Don't be dirty----------------
+This is a low-level library for calling build-backends in
+pyproject.toml-based project. It provides the basic functionality to
+help write tooling that generates distribution files from
+Python projects.
 
-pkg is optional, for this feature bla bla
-This requires: pkg1, pkg2, pkg3
+The pep517 project has been replaced by this project (low level) and
+the build project (high level).
+
+This requires: python3-opt-installer

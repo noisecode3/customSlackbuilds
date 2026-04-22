@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for python3-opt-wheel
+# Slackware build script for python3-opt-pathspec
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -25,10 +25,10 @@
 # shellcheck disable=SC2034
 cd "$(dirname "$0")"; CWD=$(pwd)
 
-PRGNAM=python3-opt-wheel
-VERSION=${VERSION:-0.46.3}
-GIT_SHA=${GIT_SHA:-8b6fa740a7101edacb42b0f8e83a1b659ff61033}
-GIT_URL="https://github.com/pypa/wheel.git"
+PRGNAM=python3-opt-pathspec
+VERSION=${VERSION:-1.0.4}
+GIT_SHA=${GIT_SHA:-39f02a9bd9de3b9b99bba5f794d63d2087a50fec}
+GIT_URL="https://github.com/cpburnz/python-pathspec.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -43,18 +43,21 @@ set -e
 prepare_git_source "$GIT_URL" "$GIT_SHA"
 set_permissions
 
-python3 -m flit_core.wheel
+unshare -n python3 -m build --wheel --no-isolation
 python3 -m installer -d "$PKG" dist/*.whl
 
 strip_pkg
-install_docs LICENSE.txt
+install_docs LICENSE
 
+#   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \
-    "$PRGNAM (A built-package format for Python)" \
-    "This library is the reference implementation of the Python wheel" \
-    "packaging standard, as defined in PEP 427." \
+    "$PRGNAM (Pattern matching of file paths)" \
+    "pathspec is a utility library for pattern matching of file paths." \
+    "So far this only includes Gitâ€™s wildmatch pattern matching which" \
+    "itself is derived from Rsyncâ€™s wildmatch. Git uses wildmatch for" \
+    "its gitignore files." \
     "" \
-    "Homepage: https://github.com/pypa/wheel"
+    "Homepage: https://github.com/cpburnz/python-pathspec"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

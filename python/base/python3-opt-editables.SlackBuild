@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for python3-opt-wheel
+# Slackware build script for python3-opt-editables
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -25,10 +25,10 @@
 # shellcheck disable=SC2034
 cd "$(dirname "$0")"; CWD=$(pwd)
 
-PRGNAM=python3-opt-wheel
-VERSION=${VERSION:-0.46.3}
-GIT_SHA=${GIT_SHA:-8b6fa740a7101edacb42b0f8e83a1b659ff61033}
-GIT_URL="https://github.com/pypa/wheel.git"
+PRGNAM=python3-opt-editables
+VERSION=${VERSION:-0.6}
+GIT_SHA=${GIT_SHA:-6bb75a27a5177825e4e178a8f02421802c654b40}
+GIT_URL="https://github.com/pfmoore/editables.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -43,18 +43,22 @@ set -e
 prepare_git_source "$GIT_URL" "$GIT_SHA"
 set_permissions
 
-python3 -m flit_core.wheel
+unshare -n python3 -m build --wheel --no-isolation
 python3 -m installer -d "$PKG" dist/*.whl
 
 strip_pkg
 install_docs LICENSE.txt
 
+#   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \
-    "$PRGNAM (A built-package format for Python)" \
-    "This library is the reference implementation of the Python wheel" \
-    "packaging standard, as defined in PEP 427." \
+    "$PRGNAM (Python library for building editable wheels)" \
+    "This library supports the building of wheels which, when installed," \
+    "will expose packages in a local directory on sys.path in \"editable" \
+    "mode\". In other words, changes to the package source will be" \
+    "reflected in the package visible to Python, without needing a" \
+    "reinstall." \
     "" \
-    "Homepage: https://github.com/pypa/wheel"
+    "Homepage: https://github.com/pfmoore/editables"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

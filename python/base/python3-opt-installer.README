@@ -1,7 +1,7 @@
-python3-opt-installer Installing from a Python wheel distribution
+python3-opt-installer (Installing from a Python wheel distribution)
 
 This is a low-level library for installing a Python package from a
 wheel distribution. It provides basic functionality and abstractions
 for handling wheels and installing packages from wheels.
 
-This requires: python3-opt python3-opt-flit_core
+This requires: python3-opt-flit_core

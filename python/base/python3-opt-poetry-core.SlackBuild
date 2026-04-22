@@ -28,22 +28,15 @@ cd "$(dirname "$0")"; CWD=$(pwd)
 PRGNAM=python3-opt-poetry-core
 VERSION=${VERSION:-2.3.2}
 GIT_SHA=${GIT_SHA:-23bf0ac6b8a50a0756ef4d657d8ff67aef88aa67}
-GIT_URL=https://github.com/python-poetry/poetry-core
+GIT_URL="https://github.com/python-poetry/poetry-core.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
 # shellcheck disable=SC1091
-source bash_funktions
+source helpers/bash_funktions
 
-if [ ! -x /opt/python3.12/bin/python3 ]; then
-    echo "Filen hittades inte: /opt/python3.12/bin/python3" >&2
-    exit 1
-fi
-
-export PATH="/opt/python3.12/bin:$PATH"
-export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
-export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
+use_opt_python3
 
 set -e
 
@@ -53,12 +46,8 @@ set_permissions
 unshare -n python3 -m build --wheel --no-isolation
 python3 -m installer -d "$PKG" dist/*.whl
 
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
-  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
-
-mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a LICENSE "$PKG/usr/doc/$PRGNAM-$VERSION"
-cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
+strip_pkg
+install_docs LICENSE
 
 #   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \

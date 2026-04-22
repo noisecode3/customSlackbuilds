@@ -72,6 +72,12 @@ use_opt_ninja() {
 }
 
 use_opt_python3() {
+    # we cant let this one get mixed up other python
+    # the other will fail with an error
+    if [ ! -x /opt/python3.12/bin/python3 ]; then
+        echo "File not found: /opt/python3.12/bin/python3" >&2
+        exit 1
+    fi
     export PATH="/opt/python3.12/bin:$PATH"
     export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
 }

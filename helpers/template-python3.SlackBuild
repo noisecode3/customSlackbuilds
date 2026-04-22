@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Slackware build script for python3-opt-typing_extensions
+# Slackware build script for template
 
 # Copyright Martin Bångens Sweden
 # All rights reserved.
@@ -25,47 +25,39 @@
 # shellcheck disable=SC2034
 cd "$(dirname "$0")"; CWD=$(pwd)
 
-PRGNAM=python3-opt-typing_extensions
-VERSION=${VERSION:-4.15.0}
-GIT_SHA=${TAR_SHA:-9d1637e264b5c1a6b7acee3e907015f89b20c2c9}
-GIT_URL=https://github.com/python/typing_extensions
+PRGNAM=template
+VERSION=${VERSION:-}
+GIT_SHA=${GIT_SHA:-}
+GIT_URL=
+TAR_SHA=${TAR_SHA:-}
+TAR_URL=
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
 # shellcheck disable=SC1091
-source bash_funktions
+source helpers/bash_funktions
 
-if [ ! -x /opt/python3.12/bin/python3 ]; then
-    echo "Filen hittades inte: /opt/python3.12/bin/python3" >&2
-    exit 1
-fi
-export PATH="/opt/python3.12/bin:$PATH"
-export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
-export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
+use_opt_python3
 
 set -e
 
+# or prepare_tar_source "$TAR_URL" "$TAR_SHA"
 prepare_git_source "$GIT_URL" "$GIT_SHA"
 set_permissions
 
 unshare -n python3 -m build --wheel --no-isolation
 python3 -m installer -d "$PKG" dist/*.whl
 
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
-  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+strip_pkg
+install_docs LICENSE
 
-mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a LICENSE "$PKG/usr/doc/$PRGNAM-$VERSION"
-cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-
+#   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \
-    "$PRGNAM (Backported type hints for Python)" \
-    "typing_extensions complements the standard-library typing module," \
-    "providing runtime support for type hints as specified by PEP 484 and" \
-    "subsequent PEPs." \
+    "$PRGNAM ()" \
     "" \
-    "Homepage: https://github.com/python/typing_extensions"
+    "" \
+    ""
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

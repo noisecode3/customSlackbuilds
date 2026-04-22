@@ -28,85 +28,38 @@ cd "$(dirname "$0")"; CWD=$(pwd)
 PRGNAM=python3-opt-scikit-build-core 
 VERSION=${VERSION:-0.12.2}
 GIT_SHA=${GIT_SHA:-5e66cd50d4380b4f5ab9025c0cd564615bf609e9}
+GIT_URL="https://github.com/scikit-build/scikit-build-core.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
-if [ -z "$ARCH" ]; then
-  case "$( uname -m )" in
-    i?86) ARCH=i586 ;;
-    arm*) ARCH=arm ;;
-       *) ARCH=$( uname -m ) ;;
-  esac
-fi
+# shellcheck disable=SC1091
+source helpers/bash_funktions
 
-if [ -n "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
-TMP=${TMP:-/tmp/SBo}
-PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
-
-if [ ! -x /opt/python3.12/bin/python3 ]; then
-    echo "Filen hittades inte: /opt/python3.12/bin/python3" >&2
-    exit 1
-fi
-export PATH="/opt/python3.12/bin:$PATH"
-export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
-export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
+use_opt_python3
 
 set -e
 
-rm -rf "$PKG"
-mkdir -p "$TMP" "$PKG" "$OUTPUT"
-cd "$TMP"
-rm -rf scikit-build-core
-git clone https://github.com/scikit-build/scikit-build-core
-cd scikit-build-core
-git -c advice.detachedHead=false checkout "$GIT_SHA"
-
-chown -R root:root .
-find -L . \
- \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-  -o -perm 511 \) -exec chmod 755 {} \; -o \
- \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
 
 unshare -n python3 -m build --wheel --no-isolation
 python3 -m installer -d "$PKG" dist/*.whl
 
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
-  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+strip_pkg
+install_docs LICENSE
 
-mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a LICENSE "$PKG/usr/doc/$PRGNAM-$VERSION"
-cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-
-mkdir -p "$PKG/install"
-BSPACE=$(printf "%${#PRGNAM}s")
-cat <<EOINS >> "$PKG/install/slack-desc"
-# HOW TO EDIT THIS FILE:
-# The "handy ruler" below makes it easier to edit a package description.
-# Line up the first '|' above the ':' following the base package name, and
-# the '|' on the right side marks the last column you can put a character in.
-# You must make exactly 11 lines for the formatting to be correct.  It's also
-# customary to leave one space after the ':' except on otherwise blank lines.
-
-$BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (extension build system using CMake)
-$PRGNAM:
-$PRGNAM: Scikit-build-core is a build backend for Python that uses CMake to
-$PRGNAM: build extension modules. It has a simple yet powerful static
-$PRGNAM: configuration system in pyproject.toml, and supports almost unlimited
-$PRGNAM: flexibility via CMake. It was initially developed to support the
-$PRGNAM: demanding needs of scientific users, but can build any sort of package
-$PRGNAM: that uses CMake.
-$PRGNAM:
-$PRGNAM: Homepage: https://github.com/scikit-build/scikit-build-core
-$PRGNAM:
-EOINS
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (extension build system using CMake)" \
+    "Scikit-build-core is a build backend for Python that uses CMake to" \
+    "build extension modules. It has a simple yet powerful static" \
+    "configuration system in pyproject.toml, and supports almost unlimited" \
+    "flexibility via CMake. It was initially developed to support the" \
+    "demanding needs of scientific users, but can build any sort of package" \
+    "that uses CMake." \
+    "" \
+    "Homepage: https://github.com/scikit-build/scikit-build-core"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

@@ -1,11 +1,12 @@
-pkg short description
+python3-opt-scikit-build-core (Build backend for CMake based projects)
 
-Ein zwei drei vier, lest go insane here.
-Bla bla bla bla blababl bla bla bla bla
-bla bla bla bla bla bla bla bla. Blabla
-bla bla bla bla. Bla blala bla bla bla bla
-bla bla bla bla blababl. Bla bla bla bla
-Don't go over 80 chars----------------------------Don't be dirty----------------
+Scikit-build-core is a build backend for Python that uses CMake
+to build extension modules. It has a simple yet powerful static
+configuration system in pyproject.toml, and supports almost unlimited
+flexibility via CMake. It was initially developed to support the
+demanding needs of scientific users, but can build any sort of
+package that uses CMake.
 
-pkg is optional, for this feature bla bla
-This requires: pkg1, pkg2, pkg3
+Scikit-build-core is a ground-up rewrite of the classic Scikit-build
+
+This requires: python3-opt-hatch-vcs, python-opt-packaging

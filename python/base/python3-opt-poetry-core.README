@@ -1,11 +1,8 @@
-pkg short description
+python3-opt-poetry-core (PEP 517 build backend impl. developed for Poetry)
 
-Ein zwei drei vier, lest go insane here.
-Bla bla bla bla blababl bla bla bla bla
-bla bla bla bla bla bla bla bla. Blabla
-bla bla bla bla. Bla blala bla bla bla bla
-bla bla bla bla blababl. Bla bla bla bla
-Don't go over 80 chars----------------------------Don't be dirty----------------
+A PEP 517 build backend implementation developed for Poetry. This
+project is intended to be a light weight, fully compliant,
+self-contained package allowing PEP 517 compatible build frontends to
+build Poetry managed projects.
 
-pkg is optional, for this feature bla bla
-This requires: pkg1, pkg2, pkg3
+This requires: python3-opt-build
