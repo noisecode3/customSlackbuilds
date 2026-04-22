@@ -31,6 +31,10 @@ else
   LIBDIRSUFFIX=""
 fi
 
+get_git_version() {
+    VERSION=$(git describe --tags --always | sed s/v// | tr '-' '.' | cut -d'.' -f1-4)
+}
+
 gzip_info() {
     find "$PKG/usr/info" -type f -exec gzip -9 {} \;
 }

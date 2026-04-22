@@ -26,87 +26,39 @@
 cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=python3-opt-numpy
-VERSION=${VERSION:-v2.4.4}
-GIT_SHA=${GIT_SHA:-}
+VERSION=${VERSION:-2.4.4}
+GIT_SHA=${GIT_SHA:-be93fe2960dbf49b4647f5783c66d967fb2c65b5}
+GIT_URL="https://github.com/numpy/numpy.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 
-if [ -z "$ARCH" ]; then
-  case "$( uname -m )" in
-    i?86) ARCH=i586 ;;
-    arm*) ARCH=arm ;;
-       *) ARCH=$( uname -m ) ;;
-  esac
-fi
+# shellcheck disable=SC1091
+source helpers/bash_funktions
 
-if [ -n "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
-TMP=${TMP:-/tmp/SBo}
-PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
-
-if [ ! -x /opt/python3.12/bin/python3 ]; then
-    echo "Filen hittades inte: /opt/python3.12/bin/python3" >&2
-    exit 1
-fi
-export PATH="/opt/python3.12/bin:$PATH"
-export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
-export PKG_CONFIG_PATH="/opt/python3.12/lib64/pkgconfig:$PKG_CONFIG_PATH"
+use_opt_python3
 
 set -e
 
-rm -rf "$PKG"
-mkdir -p "$TMP" "$PKG" "$OUTPUT"
-cd "$TMP"
-rm -rf numpy
-git clone --depth 1 -b "$VERSION" https://github.com/numpy/numpy
-cd numpy
-git submodule update --init --recursive
-VERSION=$(git describe --tags --always | sed s/v// | tr '-' '.' | cut -d'.' -f1-4)
-chown -R root:root .
-find -L . \
- \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
-  -o -perm 511 \) -exec chmod 755 {} \; -o \
- \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
-  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
 
 unshare -n python3 -m build --wheel --no-isolation
 python3 -m installer -d "$PKG" dist/*.whl
 
-find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" \
-  | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+strip_pkg
+install_docs LICENSE.txt
 
-mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
-cp -a LICENSE.txt "$PKG/usr/doc/$PRGNAM-$VERSION"
-cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
-
-mkdir -p "$PKG/install"
-BSPACE=$(printf "%${#PRGNAM}s")
-cat <<EOINS >> "$PKG/install/slack-desc"
-# HOW TO EDIT THIS FILE:
-# The "handy ruler" below makes it easier to edit a package description.
-# Line up the first '|' above the ':' following the base package name, and
-# the '|' on the right side marks the last column you can put a character in.
-# You must make exactly 11 lines for the formatting to be correct.  It's also
-# customary to leave one space after the ':' except on otherwise blank lines.
-
-$BSPACE|-----handy-ruler------------------------------------------------------|
-$PRGNAM: $PRGNAM (Python module for scientific computing)
-$PRGNAM:
-$PRGNAM: NumPy is the fundamental package for scientific computing with Python.
-$PRGNAM: Besides its obvious scientific uses, NumPy can also be used as an
-$PRGNAM: efficient multi-dimensional container of generic data. Arbitrary data
-$PRGNAM: types can be defined, allowing NumPy to seamlessly integrate with a
-$PRGNAM: wide variety of databases. 
-$PRGNAM:
-$PRGNAM: Homepage: https://github.com/numpy/numpy
-$PRGNAM:
-$PRGNAM:
-EOINS
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (Python module for scientific computing)" \
+    "NumPy is the fundamental package for scientific computing with Python." \
+    "Besides its obvious scientific uses, NumPy can also be used as an" \
+    "efficient multi-dimensional container of generic data. Arbitrary data" \
+    "types can be defined, allowing NumPy to seamlessly integrate with a" \
+    "wide variety of databases." \
+    "" \
+    "Homepage: https://github.com/numpy/numpy"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
