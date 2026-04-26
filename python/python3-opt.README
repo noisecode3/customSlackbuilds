@@ -14,8 +14,7 @@ reproducible, and flexible builds. Quality is prioritized alongside security;
 patches and workarounds are welcome. Release tarballs are diffed against git
 versions, and useful patches from other distributions are considered.
 
-See the README files in base/ and common/ for the recommended build order of
-modules.
+Start with flit_core -> installer -> wheel then everything else in base
 
 Work in progress — primarily targeting the latest versions of kitty, yt-dlp,
 and Sphinx.

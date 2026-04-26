@@ -36,11 +36,13 @@ PKGTYPE=${PKGTYPE:-tgz}
 # shellcheck disable=SC1091
 source helpers/bash_funktions
 
+use_opt_ninja
 use_opt_python3
 
 set -e
 
 prepare_git_source "$GIT_URL" "$GIT_SHA"
+git submodule update --init --recursive
 set_permissions
 
 unshare -n python3 -m build --wheel --no-isolation

@@ -59,7 +59,7 @@ unshare -n python3 -m build --wheel --no-isolation
 python3 -m installer -d "$PKG" dist/*.whl
 
 strip_pkg
-install_docs LICENSE
+install_docs
 
 #   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \

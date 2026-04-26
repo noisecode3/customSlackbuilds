@@ -1,0 +1,10 @@
+python3-opt-matplotlib (plotting library, making publication quality plots)
+
+Matplotlib produces publication-quality figures in a variety of hardcopy formats
+and interactive environments across platforms. Matplotlib can be used in Python
+scripts, Python/IPython shells, web application servers, and various graphical
+user interface toolkits.
+
+This requires: python3-opt-contourpy python3-opt-cycler python3-opt-dateutil
+python3-opt-fonttools python3-opt-kiwisolver python3-opt-numpy
+python3-opt-packaging python3-opt-pillow python3-opt-pyparsing qhull 

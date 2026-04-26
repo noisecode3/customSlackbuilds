@@ -1,0 +1,6 @@
+python3-opt-dateutil (extensions to the standard datetime module)
+
+The dateutil module provides powerful extensions to the standard datetime
+module.
+
+This requires: python3-opt-six

@@ -1,0 +1,4 @@
+python3-opt-imagesize (get image size)
+
+Analyzes JPEG/JPEG 2000/PNG/GIF/TIFF/SVG/Netpbm/WebP image headers and returns
+image size or DPI.

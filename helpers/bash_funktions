@@ -50,7 +50,9 @@ gzip_man() {
 install_docs() {
     local dest="$PKG/usr/doc/$PRGNAM-$VERSION"
     mkdir -p "$dest"
-    cp -a "$@" "$dest"
+    if [ "$#" -gt 0 ]; then
+        cp -a "$@" "$dest"
+    fi
     cat "$CWD/$PRGNAM.SlackBuild" > "$dest/$PRGNAM.SlackBuild"
     find "$PKG/usr/doc/$PRGNAM-$VERSION" -type f -exec chmod 0644 {} \+
 }

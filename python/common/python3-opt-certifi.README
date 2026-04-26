@@ -1,0 +1,5 @@
+python3-opt-certifi (SSL certificates)
+
+Certifi provides Mozilla's carefully curated collection of Root Certificates for
+validating using system CA store. Using the trustworthiness of SSL certificates
+while verifying the identity of TLS hosts.
