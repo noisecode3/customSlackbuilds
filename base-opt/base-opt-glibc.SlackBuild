@@ -1,0 +1,388 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-glibc
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-glibc
+VERSION=${VERSION:-2.42}
+GIT_SHA=${GIT_SHA:-748699d9385fc298f7d3369af0a015a6d88b7e64}
+GIT_URL="https://sourceware.org/git/glibc.git"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+NUMJOBS=${NUMJOBS:-"-j$(($(nproc)+1))"}
+OPTIMIZED=${OPTIMIZED:-NO}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+set_multilib
+
+set -e
+
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
+
+export PATH="/opt/base/bin${PATH:+:$PATH}"
+export PKG_CONFIG_PATH="/opt/base/lib64/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+export CMAKE_PREFIX_PATH="/opt/base${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
+
+if [ "$OPTIMIZED" = "YES" ]; then
+  SLKCFLAGS32="-O3 -march=native -mstackrealign -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer"
+  SLKCFLAGS64="-O3 -march=native -fPIC"
+else
+  SLKCFLAGS32="-O3 -march=pentium4 -mtune=generic -mstackrealign -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer"
+  SLKCFLAGS64="-O3 -march=x86-64 -mtune=generic -fPIC"
+fi
+
+patch=$(cat <<'EOINS'
+--- ./localedata/locales/en_US.orig	2021-01-16 18:40:31.050990981 -0600
++++ ./localedata/locales/en_US	2021-01-16 18:42:44.784983583 -0600
+@@ -124,7 +124,10 @@
+ % different from d_t_fmt for historical reasons and has been different
+ % since 2000 when date_fmt was added as a GNU extension.  At the end
+ % of 2018 it was adjusted to use 12H time (bug 24046) instead of 24H.
+-date_fmt "%a %b %e %r %Z %Y"
++% [ Slackware editor's note - no thank you, US users
++% of UNIX-like systems expect a 24 hour clock, just
++% like users in the vast majority of other locales. ]
++%date_fmt "%a %d %b %Y %r %Z"
+ %
+ % Strings for AM/PM
+ %
+EOINS
+)
+echo "$patch" | patch -p0 -F15
+
+patch=$(cat <<'EOINS'
+--- ./localedata/Makefile.orig	2019-02-16 14:05:01.794154302 -0600
++++ ./localedata/Makefile	2019-02-16 14:06:25.744146460 -0600
+@@ -562,6 +562,7 @@
+ 	echo -n '...'; \
+ 	input=`echo $$locale | sed 's/\([^.]*\)[^@]*\(.*\)/\1\2/'`; \
+ 	$(LOCALEDEF) $$flags --alias-file=../intl/locale.alias \
++		    --no-archive \
+ 		    -i locales/$$input -f charmaps/$$charset \
+ 		    $(addprefix --prefix=,$(install_root)) $$locale \
+ 	&& echo ' done';
+EOINS
+)
+echo "$patch" | patch -p0 -F15
+
+patch=$(cat <<'EOINS'
+diff -up glibc-2.38/Makeconfig.45~ glibc-2.38/Makeconfig
+--- glibc-2.38/Makeconfig.45~	2023-08-01 01:02:58.246719027 +0200
++++ glibc-2.38/Makeconfig	2023-08-01 01:02:58.303719582 +0200
+@@ -381,6 +381,15 @@ relro-LDFLAGS = -Wl,-z,relro
+ LDFLAGS.so += $(relro-LDFLAGS)
+ LDFLAGS-rtld += $(relro-LDFLAGS)
+ 
++ifeq (yes,$(have-hash-style))
++# For the time being we unconditionally use 'both'.  At some time we
++# should declare statically linked code as 'out of luck' and compile
++# with --hash-style=gnu only.
++hashstyle-LDFLAGS = -Wl,--hash-style=both
++LDFLAGS.so += $(hashstyle-LDFLAGS)
++LDFLAGS-rtld += $(hashstyle-LDFLAGS)
++endif
++
+ # Linker options to enable and disable DT_RELR.
+ ifeq ($(have-dt-relr),yes)
+ dt-relr-ldflag = -Wl,-z,pack-relative-relocs
+diff -up glibc-2.38/Makerules.45~ glibc-2.38/Makerules
+diff -up glibc-2.38/config.make.in.45~ glibc-2.38/config.make.in
+--- glibc-2.38/config.make.in.45~	2023-08-01 01:02:58.301719562 +0200
++++ glibc-2.38/config.make.in	2023-08-01 01:03:54.721267748 +0200
+@@ -71,6 +71,7 @@ have-libaudit = @have_libaudit@
+ have-libcap = @have_libcap@
+ have-cc-with-libunwind = @libc_cv_cc_with_libunwind@
+ bind-now = @bindnow@
++have-hash-style = @libc_cv_hashstyle@
+ have-cxx-thread_local = @libc_cv_cxx_thread_local@
+ have-loop-to-function = @libc_cv_cc_loop_to_function@
+ have-textrel_ifunc = @libc_cv_textrel_ifunc@
+diff -up glibc-2.38/configure.45~ glibc-2.38/configure
+--- glibc-2.38/configure.45~	2023-07-31 19:54:16.000000000 +0200
++++ glibc-2.38/configure	2023-08-01 01:04:54.904850299 +0200
+@@ -655,6 +655,7 @@ libc_cv_cc_submachine
+ libc_cv_cc_nofma
+ libc_cv_mtls_dialect_gnu2
+ libc_cv_has_glob_dat
++libc_cv_hashstyle
+ libc_cv_fpie
+ libc_cv_z_execstack
+ ASFLAGS_config
+@@ -7107,6 +7108,32 @@ fi
+ printf "%s\n" "$libc_cv_fpie" >&6; }
+ 
+ 
++{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for --hash-style option" >&5
++$as_echo_n "checking for --hash-style option... " >&6; }
++if ${libc_cv_hashstyle+:} false; then :
++  $as_echo_n "(cached) " >&6
++else
++  cat > conftest.c <<EOF
++int _start (void) { return 42; }
++EOF
++if { ac_try='${CC-cc} $CFLAGS $CPPFLAGS $LDFLAGS $no_ssp
++                           -fPIC -shared -o conftest.so conftest.c
++                           -Wl,--hash-style=both -nostdlib 1>&5'
++  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
++  (eval $ac_try) 2>&5
++  ac_status=$?
++  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
++  test $ac_status = 0; }; }
++then
++  libc_cv_hashstyle=yes
++else
++  libc_cv_hashstyle=no
++fi
++rm -f conftest*
++fi
++{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_hashstyle" >&5
++$as_echo "$libc_cv_hashstyle" >&6; }
++
+ 
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for GLOB_DAT reloc" >&5
+ printf %s "checking for GLOB_DAT reloc... " >&6; }
+diff -up glibc-2.38/configure.ac.45~ glibc-2.38/configure.ac
+--- glibc-2.38/configure.ac.45~	2023-07-31 19:54:16.000000000 +0200
++++ glibc-2.38/configure.ac	2023-08-01 01:02:58.303719582 +0200
+@@ -1339,6 +1339,22 @@ LIBC_TRY_CC_OPTION([-fpie], [libc_cv_fpi
+ 
+ AC_SUBST(libc_cv_fpie)
+ 
++AC_CACHE_CHECK(for --hash-style option,
++	      libc_cv_hashstyle, [dnl
++cat > conftest.c <<EOF
++int _start (void) { return 42; }
++EOF
++if AC_TRY_COMMAND([${CC-cc} $CFLAGS $CPPFLAGS $LDFLAGS $no_ssp
++			   -fPIC -shared -o conftest.so conftest.c
++			   -Wl,--hash-style=both -nostdlib 1>&AS_MESSAGE_LOG_FD])
++then
++  libc_cv_hashstyle=yes
++else
++  libc_cv_hashstyle=no
++fi
++rm -f conftest*])
++AC_SUBST(libc_cv_hashstyle)
++
+ AC_CACHE_CHECK(for GLOB_DAT reloc,
+ 	      libc_cv_has_glob_dat, [dnl
+ cat > conftest.c <<EOF
+EOINS
+)
+echo "$patch" | patch -p1
+
+# Hand off the $ARCH variable to $SLACKWARE_ARCH to avoid confusing glibc:
+SLACKWARE_ARCH=$ARCH
+unset ARCH
+
+if [ -f /opt/base/include/stdio.h ]; then
+  WITH_HEADERS=/opt/base/include
+else
+  WITH_HEADERS=/usr/include
+fi
+
+mkdir "$PKG/32"
+mkdir "$PKG/64"
+
+export CC="gcc -m32"
+export CXX="g++ -m32"
+if [ "$MULTILIB" = "YES" ]; then
+  (
+    echo "BUILD 32-bit glibc"
+    mkdir -p "$PKG/32/opt/base/lib"
+    mkdir -p build32
+    cd build32
+    unset LDFLAGS
+    unset CFLAGS
+    unset CXXFLAGS
+    CFLAGS="$SLKCFLAGS32" \
+    CXXFLAGS="$SLKCFLAGS32" \
+    ../configure \
+      --prefix=/opt/base \
+      --libdir=/opt/base/lib \
+      --libexecdir=/opt/base/lib \
+      --infodir=/usr/info \
+      --with-headers=$WITH_HEADERS \
+      --with-zoneinfo-dir=/usr/share/zoneinfo \
+      --enable-kernel=4.4 \
+      --enable-profile \
+      --with-tls \
+      --with-__thread \
+      --disable-werror \
+      --disable-nscd \
+      --without-cvs \
+      "i686-slackware-linux"
+
+    make "$NUMJOBS"
+    make install install_root="$PKG/32"
+  )
+fi
+export CC="gcc"
+export CXX="g++"
+echo "BUILD 64-bit glibc"
+mkdir -p "$PKG/64/opt/base/lib64"
+mkdir -p build64
+cd build64
+  unset LDFLAGS
+  unset CFLAGS
+  unset CXXFLAGS
+  CFLAGS="$SLKCFLAGS64" \
+  CXXFLAGS="$SLKCFLAGS64" \
+  ../configure \
+    --prefix=/opt/base \
+    --libdir=/opt/base/lib64 \
+    --libexecdir=/opt/base/lib64 \
+    --infodir=/usr/info \
+    --with-headers=$WITH_HEADERS \
+    --with-zoneinfo-dir=/usr/share/zoneinfo \
+    --enable-kernel=4.4 \
+    --enable-profile \
+    --with-tls \
+    --with-__thread \
+    --disable-werror \
+    --disable-nscd \
+    --without-cvs \
+    "$SLACKWARE_ARCH-slackware-linux"
+
+  make "$NUMJOBS"
+  make install install_root="$PKG/64"
+  make "$NUMJOBS" localedata/install-locales \
+    install_root="$PKG/64" DESTDIR="$PKG/64"
+cd ..
+
+mkdir -p "$PKG/opt/base/"
+
+# for 64-bit binaries we set everything to lib64
+mv "$PKG/64/opt/base/bin/" "$PKG/opt/base/"
+cd "$PKG/opt/base/bin/"
+for bin in gencat getconf getent iconv locale localedef makedb pcprofiledump pldd sprof zdump; do
+    patchelf \
+        --set-interpreter /opt/base/lib64/ld-linux-x86-64.so.2 \
+        --set-rpath /opt/base/lib64 \
+        "$bin"
+done
+
+# headers
+mv "$PKG/64/opt/base/include/" "$PKG/opt/base/"
+mv "$PKG/32/opt/base/include/gnu/lib-names-32.h" "$PKG/opt/base/include/gnu/"
+mv "$PKG/32/opt/base/include/gnu/stubs-32.h" "$PKG/opt/base/include/gnu/"
+
+# we also include system Linux headers links
+cd "$PKG/opt/base/include/"
+for dir in linux asm asm-generic asm-x86_64 \
+            xen video sound scsi regulator \
+            rdma mtd misc fwctl cxl drm; do
+    if [ -d "/usr/include/$dir" ]; then
+        ln -sf "/usr/include/$dir" "$PKG/opt/base/include/$dir"
+    fi
+done
+
+# etc
+mv "$PKG/64/opt/base/etc/" "$PKG/opt/base/"
+rm "$PKG/opt/base/etc/ld.so.cache"
+
+# lib
+mv "$PKG/32/opt/base/lib/" "$PKG/opt/base/"
+cd "$PKG/opt/base/lib/"
+for bin in audit/sotruss-lib.so libanl.so.1 libc_malloc_debug.so.0 libm.so.6 libnss_compat.so.2 libnss_dns.so.2 \
+  libc.so.6 libnss_hesiod.so.2 libresolv.so.2 libthread_db.so.1 libBrokenLocale.so.1 libdl.so.2 \
+  libnsl.so.1 libnss_db.so.2 libnss_files.so.2 libpthread.so.0 librt.so.1 libutil.so.1 gconv/*.so; do
+    patchelf \
+        --set-rpath /opt/base/lib \
+        "$bin"
+done
+
+# lib64
+mv "$PKG/64/opt/base/lib64/" "$PKG/opt/base/"
+mv "$PKG/64/opt/base/lib/"* "$PKG/opt/base/lib64/"
+cd "$PKG/opt/base/lib64/"
+for bin in audit/sotruss-lib.so libanl.so.1 libc_malloc_debug.so.0 libm.so.6 libnss_compat.so.2 libnss_dns.so.2 \
+  libc.so.6 libnss_hesiod.so.2 libresolv.so.2 libthread_db.so.1 libBrokenLocale.so.1 libdl.so.2 \
+  libnsl.so.1 libnss_db.so.2 libnss_files.so.2 libpthread.so.0 librt.so.1 libutil.so.1 gconv/*.so; do
+    patchelf \
+        --set-rpath /opt/base/lib64 \
+        "$bin"
+done
+sed -i 's|/opt/base/lib/|/opt/base/lib64/|g' libc.so
+sed -i 's|/opt/base/lib/|/opt/base/lib64/|g' libm.so
+
+# root binaries
+mv "$PKG/64/opt/base/sbin/" "$PKG/opt/base/"
+cd "$PKG/opt/base/sbin/"
+for bin in iconvconfig zic; do
+    patchelf \
+        --set-interpreter /opt/base/lib64/ld-linux-x86-64.so.2 \
+        --set-rpath /opt/base/lib64 \
+        "$bin"
+done
+cd "$PKG"
+
+# share
+mv "$PKG/64/opt/base/share/" "$PKG/opt/base/"
+
+# var
+mv "$PKG/64/opt/base/var/" "$PKG/opt/base/"
+
+# clean up 
+rm -fr "$PKG/64/" "$PKG/32/"
+
+cd  "$TMP/glibc"
+
+# fix minimal locales
+only_C_en_US_locale "$PKG/opt/base/share/locale"
+only_C_en_US_locale "$PKG/opt/base/lib64/locale/"
+cp -a "$PKG/opt/base/lib64/locale/" "$PKG/opt/base/lib/locale/"
+only_C_en_US_locale "$PKG/opt/base/share/i18n/locales/" 
+
+# clena up
+rm -fr "$PKG/usr/info"
+
+only_UTF8_charmaps() {
+  find "$1" -mindepth 1 -maxdepth 1 \
+    ! -name 'UTF-8*' \
+    ! -name 'ANSI_X3.4*' \
+    -exec rm -rf -- {} +
+}
+only_UTF8_charmaps "$PKG/opt/base/share/i18n/charmaps/"
+install_docs COPYING*
+
+strip_pkg
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (GNU C libraries)" \
+    "This package contains the GNU C libraries and header files. You'll" \
+    "need this package to compile programs." \
+    "" \
+    "The GNU C library was originally authored by Roland McGrath." \
+    "" \
+    "Homepage: https://www.gnu.org/software/libc"
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$SLACKWARE_ARCH-$BUILD$TAG.$PKGTYPE"

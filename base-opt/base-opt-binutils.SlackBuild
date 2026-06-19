@@ -1,0 +1,199 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-binutils
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-binutils
+VERSION=${VERSION:-2.46.1}
+GIT_SHA=${GIT_SHA:-5e56594815854de5eca35c7c04b11705d0f19c02}
+GIT_URL="https://sourceware.org/git/binutils-gdb.git"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+STAGE1_FORCE=${STAGE1_FORCE:-NO}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+set_multilib
+
+set -e
+
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
+
+NUMJOBS=${NUMJOBS:-"-j$(($(nproc)+1))"}
+
+if [ -f /opt/base/include/stdio.h ] && [ "$STAGE1_FORCE" != "YES" ]; then
+  echo -e " *\n * We link to /opt/base we are bootstraping (Stage 2)\n *"
+  export CC="gcc"
+  export CXX="g++"
+  export PATH=/opt/base/bin:$PATH
+  export LDFLAGS=" \
+    -L/opt/base/lib64 \
+    -Wl,-rpath,/opt/base/lib64 \
+    -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 \
+  "
+  export PKG_CONFIG_PATH=/opt/base/lib64/pkgconfig
+  export PKG_CONFIG_LIBDIR=/opt/base/lib64
+  EXTRA_FLAGS="--with-sysroot=/ --without-debuginfod --disable-gprofng"
+else
+  echo -e " *\n * We link to system root, we are bootstraping (Stage 1)\n *"
+  EXTRA_FLAGS=
+fi
+
+# check for multilib
+if [ "$MULTILIB" = "YES" ]; then
+  TARGETS="i386-efi-pe,${ARCH}-slackware-linux"
+  MULTILIB_FLAG="--enable-multilib"
+else
+  TARGETS="${ARCH}-slackware-linux"
+  MULTILIB_FLAG="--disable-multilib"
+fi
+
+patch_text=$(cat <<'END_PATCH'
+  # find out which ABI we are using
+  libsuff=
+  case "$host_cpu" in
+  x86_64*|s390*|powerpc*|ppc*|sparc*)
+    echo 'int i;' > conftest.$ac_ext
+    if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: $? = $ac_status" >&5
+  (exit $ac_status); }; then
+      case `/usr/bin/file conftest.$ac_objext` in
+      *64-bit*)
+        libsuff=64
+        if test x"$sys_lib_search_path_spec" = x"/lib /usr/lib /usr/local/lib"; then
+          sys_lib_search_path_spec="/lib${libsuff} /usr/lib${libsuff} /usr/local/lib${libsuff}"
+        fi
+        sys_lib_dlsearch_path_spec="/lib${libsuff} /usr/lib${libsuff}"
+        ;;
+      esac
+    fi
+    rm -rf conftest*
+    ;;
+  esac
+
+END_PATCH
+)
+patch_configure() {
+  local file="$1"
+  local awk_patch_text="$patch_text"
+  gawk -v PATCH="$awk_patch_text" '
+    /^[[:space:]]+# before this can be enabled\./ { in_marker=1 }
+    in_marker && /^[[:space:]]+hardcode_into_libs=yes/ {
+      print
+      print ""
+      print PATCH
+      in_marker=0
+      next
+    }
+    /sys_lib_dlsearch_path_spec="\/lib \/usr\/lib \$lt_ld_extra"/ {
+      sub(/sys_lib_dlsearch_path_spec="\/lib \/usr\/lib \$lt_ld_extra"/,
+          "sys_lib_dlsearch_path_spec=\"/lib${libsuff} /usr/lib${libsuff} $lt_ld_extra\"")
+    }
+    { print }
+  ' "$file" > "$file.tmp" && cat "$file.tmp" > "$file" && rm "$file.tmp"
+}
+
+patch_configure bfd/configure
+patch_configure binutils/configure
+patch_configure gas/configure
+patch_configure gprof/configure
+patch_configure ld/configure
+patch_configure opcodes/configure
+
+# Set to ld.bfd. The old gold linker is no more.
+DEFAULT_LD=${DEFAULT_LD:-ld.bfd}
+
+# shellcheck disable=SC2086
+CFLAGS="$SLKCFLAGS" \
+./configure \
+  --prefix=/opt/base \
+  --libdir="/opt/base/lib${LIBDIRSUFFIX}" \
+  --with-lib-path=/opt/base/lib${LIBDIRSUFFIX} \
+  --sysconfdir=/opt/base/etc \
+  --mandir=/usr/man \
+  --infodir=/usr/info \
+  --docdir="/usr/doc/base-opt-binutils-$VERSION" \
+  --disable-compressed-debug-sections \
+  --disable-shared \
+  --disable-sim \
+  --disable-gdb \
+  --disable-gdbserver \
+  $MULTILIB_FLAG \
+  $EXTRA_FLAGS \
+  --enable-64-bit-bfd \
+  --enable-plugins \
+  --enable-threads \
+  --enable-targets="$TARGETS" \
+  --enable-install-libiberty \
+  --enable-ld=default \
+  --enable-initfini-array \
+  --enable-gold=no \
+  --build="${ARCH}-slackware-linux"
+
+make clean
+make tooldir=/opt/base "$NUMJOBS" || make tooldir=/opt/base
+make tooldir=/opt/base install DESTDIR="$PKG"
+
+# Don't ship .la files:
+rm -f "$PKG/opt/base/lib/"*.la
+rm -f "$PKG/opt/base/lib${LIBDIRSUFFIX}/"*.la
+rm -f "$PKG/opt/base/lib${LIBDIRSUFFIX}/gprofng/"*.la
+
+( cd "$PKG/opt/base/bin" ; ln -sf strings strings-GNU )
+( cd "$PKG/opt/base/bin" ; ln -sf "../lib${LIBDIRSUFFIX}/ld-linux-x86-64.so.2" ld.so )
+
+# If the requested default linker is present, make it the default:
+# Set the link differently on the system to change the default at runtime.
+if [ -r "$PKG/opt/base/bin/$DEFAULT_LD" ]; then
+  ( cd "$PKG/opt/base/bin" ; rm -f ld ; ln -sf "$DEFAULT_LD" ld )
+fi
+
+add_version_info "$VERSION"
+gzip_info
+
+add_version_man "$VERSION"
+gzip_man
+
+only_C_en_US_locale "$PKG/opt/base/share/locale"
+strip_pkg
+install_docs COPYING*
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (GNU binary development tools)" \
+    "Binutils is a collection of binary utilities. It includes \"as\" (the " \
+    "portable GNU assembler), \"ld\" (the GNU linker), and other utilities" \
+    "for creating and working with binary programs." \
+    "" \
+    "These utilities are required to compile C, C++, Objective-C, Fortran," \
+    "and most other programming languages."
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

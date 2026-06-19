@@ -29,8 +29,6 @@ PRGNAM=template
 VERSION=${VERSION:-}
 GIT_SHA=${GIT_SHA:-}
 GIT_URL=""
-TAR_SHA=${TAR_SHA:-}
-TAR_URL=""
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -38,72 +36,27 @@ PKGTYPE=${PKGTYPE:-tgz}
 # shellcheck disable=SC1091
 source helpers/bash_funktions
 
-use_opt_ninja
-use_opt_python3
+use_opt_rust
 
 set -e
 
 prepare_git_source "$GIT_URL" "$GIT_SHA"
 set_permissions
 
+CARGO_TARGET_DIR="target" \
+  cargo build --release --all-features
 
-# patch
-patch1=$(cat <<'EOINS'
---- dmenu-4.9-orig/config.mk	2019-02-02 05:55:02.000000000 -0700
-+++ dmenu-4.9/config.mk	2020-04-19 13:12:15.427727907 -0600
-@@ -4,6 +4,7 @@
- # paths
- PREFIX = /usr/local
- MANPREFIX = $(PREFIX)/share/man
-+LIBDIR = /usr/local/lib
- 
- X11INC = /usr/X11R6/include
- X11LIB = /usr/X11R6/lib
-@@ -20,11 +21,12 @@
- 
- # includes and libs
- INCS = -I$(X11INC) -I$(FREETYPEINC)
--LIBS = -L$(X11LIB) -lX11 $(XINERAMALIBS) $(FREETYPELIBS)
-+LIBS = -L$(LIBDIR) -L$(X11LIB) -lX11 $(XINERAMALIBS) $(FREETYPELIBS)
- 
- # flags
-+OPTS ?= -Os
- CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\" $(XINERAMAFLAGS)
--CFLAGS   = -std=c99 -pedantic -Wall -Os $(INCS) $(CPPFLAGS)
-+CFLAGS   = -std=c99 -pedantic -Wall $(OPTS) $(INCS) $(CPPFLAGS)
- LDFLAGS  = $(LIBS)
- 
- # compiler and linker
-EOINS
-)
-echo "$patch1" | patch -p1
+# install
+mkdir -p "$PKG/usr/bin"
+find "target/release" -maxdepth 1 -type f -executable -exec \
+  install -D -m755 -t "$PKG/usr/bin" {} +
 
-CFLAGS="$SLKCFLAGS" \
-CXXFLAGS="$SLKCFLAGS" \
-meson setup \
-  --prefix /usr \
-  --libdir "/usr/lib${LIBDIRSUFFIX}" \
-  --mandir /usr/man \
-  --sysconfdir /etc \
-  --localstatedir /var \
-  -Dmans=true \
-  build
-CFLAGS="$SLKCFLAGS" ninja -C build
-DESTDIR=$PKG ninja -C build install
-
-config=$(cat <<'EOINS'
-some file text
-var1=black
-var2=blue
-
-EOINS
-)
-FILE_NAME="$PKG/etc/prgram/config"
-echo "$config" >> "$FILE_NAME"
-chmod 0755 "$FILE_NAME"
+# gzip_man ## usually there is no manual for rust programs
+# but you might need to generate autocomplete files from
+# the app itself usually like this
+# app --generate-shell-completions zsh > ~/.zsh-completions/_app
 
 strip_pkg
-gzip_man
 install_docs LICENSE README
 
 #   |-----handy-ruler------------------------------------------------------|
@@ -112,15 +65,6 @@ write_slack_desc "$PKG" "$PRGNAM" \
     "" \
     "" \
     ""
-
-# This type of file good for files with default permissions
-doinst=$(cat <<'EOINS'
-if [ -x /usr/bin/update-desktop-database ]; then
-  /usr/bin/update-desktop-database -q usr/share/applications >/dev/null 2>&1
-fi
-EOINS
-)
-echo "$doinst" >> "$PKG/install/doinst.sh"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

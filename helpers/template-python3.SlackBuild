@@ -28,9 +28,9 @@ cd "$(dirname "$0")"; CWD=$(pwd)
 PRGNAM=template
 VERSION=${VERSION:-}
 GIT_SHA=${GIT_SHA:-}
-GIT_URL=
+GIT_URL=""
 TAR_SHA=${TAR_SHA:-}
-TAR_URL=
+TAR_URL=""
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -42,7 +42,6 @@ use_opt_python3
 
 set -e
 
-# or prepare_tar_source "$TAR_URL" "$TAR_SHA"
 prepare_git_source "$GIT_URL" "$GIT_SHA"
 set_permissions
 

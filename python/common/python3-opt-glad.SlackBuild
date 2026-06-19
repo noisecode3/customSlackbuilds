@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Slackware build script for clipcat
+# Slackware build script for python3-opt-glad
 
-# Copyright Martin Bångens 2024
+# Copyright Martin Bångens Sweden
 # All rights reserved.
 #
 # Redistribution and use of this script, with or without modification, is
@@ -25,10 +25,10 @@
 # shellcheck disable=SC2034
 cd "$(dirname "$0")"; CWD=$(pwd)
 
-PRGNAM=clipcat
-VERSION=${VERSION:-0.25.0}
-GIT_SHA=${GIT_SHA:-cab2d4a54b7f0a3f926ecc5fd2a6b13f176f5eac} # after 0.25.0
-GIT_URL="https://github.com/xrelkd/clipcat.git"
+PRGNAM=python3-opt-glad
+VERSION=${VERSION:-2.0.8}
+GIT_SHA=${GIT_SHA:-73db193f853e2ee079bf3ca8a64aa2eaf6459043}
+GIT_URL="https://github.com/Dav1dde/glad.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -36,37 +36,25 @@ PKGTYPE=${PKGTYPE:-tgz}
 # shellcheck disable=SC1091
 source helpers/bash_funktions
 
-use_opt_rust
+use_opt_python3
 
 set -e
 
+# or prepare_tar_source "$TAR_URL" "$TAR_SHA"
 prepare_git_source "$GIT_URL" "$GIT_SHA"
 set_permissions
-VERSION=$(git describe --tags --always | tr '-' '.' | sed -E 's/^v//; s/\.g[0-9a-f]*$//')
 
-mkdir -p completion
-cargo build --release
-binaries=("clipcat-menu" "clipcat-notify" "clipcatctl" "clipcatd")
-for bin in "${binaries[@]}"; do
-    "target/release/$bin" completions bash > "completion/$bin.bash"
-    "target/release/$bin" completions zsh >  "completion/$bin.zsh"
-    "target/release/$bin" completions fish > "completion/$bin.fish"
-done
-
-install -Dm755 -t "$PKG/usr/bin" "${binaries[@]/#/target/release/}"
-for bin in "${binaries[@]}"; do
-    install -Dm644 "completion/$bin.bash" "${PKG}/usr/share/bash-completion/completions/$bin"
-    install -Dm644 "completion/$bin.zsh" "${PKG}/usr/share/zsh/site-functions/_$bin"
-    install -Dm644 "completion/$bin.fish" "${PKG}/usr/share/fish/vendor_completions.d/$bin.fish"
-done
+unshare -n python3 -m build --wheel --no-isolation
+python3 -m installer -d "$PKG" dist/*.whl
 
 strip_pkg
 install_docs LICENSE README.md
 
 #   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \
-    "$PRGNAM (Clipcat clipboard manager)" \
-    "A clipboard manager written in Rust Programming Language."
+    "$PRGNAM (Python binding for GLAD Loader-Generator)" \
+    "GLAD is a Vulkan/GL/GLES/EGL/GLX/WGL Loader-Generator" \
+    "based on the official specifications for multiple languages."
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

@@ -1,0 +1,122 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-mpfr
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-mpfr
+VERSION=${VERSION:-4.2.2}
+TAR_SHA=${GIT_SHA:-b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01}
+TAR_URL="https://ftp.gnu.org/gnu/mpfr/mpfr-$VERSION.tar.xz"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+NUMJOBS=${NUMJOBS:-"-j$(($(nproc)+1))"}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+set_multilib
+
+set -e
+
+prepare_tar_source "$TAR_URL" "$TAR_SHA"
+set_permissions
+
+export PATH=/opt/base/bin:$PATH
+
+export CC="gcc -m32"
+export CXX="g++ -m32"
+export LDFLAGS=" \
+  -L/opt/base/lib \
+  -Wl,-rpath,/opt/base/lib \
+  -Wl,--dynamic-linker,/opt/base/lib/ld-linux.so.2 \
+"
+export PKG_CONFIG_PATH=/opt/base/lib/pkgconfig
+export PKG_CONFIG_LIBDIR=/opt/base/lib/pkgconfig
+
+if [ "$MULTILIB" = "YES" ]; then
+  echo "BUILD 32-bit mpfr"
+  CFLAGS="$SLKCFLAGS" \
+  ./configure \
+    --prefix=/opt/base \
+    --libdir=/opt/base/lib \
+    --infodir=/usr/info \
+    --docdir="/usr/doc/$PRGNAM-$VERSION" \
+    --enable-static=no \
+    --enable-shared=yes \
+    --build=i686-slackware-linux
+
+  make "$NUMJOBS" || make
+  make install DESTDIR="$PKG"
+  make distclean 
+  find "$PKG/opt/base/lib" -name '*.la' -delete
+fi
+
+export CC="gcc"
+export CXX="g++"
+export LDFLAGS=" \
+  -L/opt/base/lib64 \
+  -Wl,-rpath,/opt/base/lib64 \
+  -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 \
+"
+export PKG_CONFIG_PATH=/opt/base/lib64/pkgconfig
+export PKG_CONFIG_LIBDIR=/opt/base/lib64/pkgconfig
+
+echo "BUILD 64-bit mpfr"
+CFLAGS="$SLKCFLAGS" \
+./configure \
+  --prefix=/opt/base \
+  --libdir="/opt/base/lib${LIBDIRSUFFIX}" \
+  --infodir=/usr/info \
+  --docdir="/usr/doc/$PRGNAM-$VERSION" \
+  --enable-static=no \
+  --enable-shared=yes \
+  --host="$ARCH-slackware-linux" \
+  --build="$ARCH-slackware-linux"
+
+make "$NUMJOBS"
+make install DESTDIR="$PKG"
+find "$PKG/opt/base/lib${LIBDIRSUFFIX}" -name '*.la' -delete
+
+add_version_info "$VERSION"
+gzip_info
+
+install_docs AUTHORS COPYING*
+strip_pkg
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (Multiple-Precision Floating-Point Reliable Library)" \
+    "The MPFR library is a C library for multiple-precision floating-point" \
+    "computations with exact rounding (also called correct rounding)." \
+    "It is based on the GMP multiple-precision library." \
+    "The main goal of MPFR is to provide a library for multiple-precision" \
+    "floating-point computation which is both efficient and has" \
+    "well-defined semantics. It copies the good ideas from the" \
+    "ANSI/IEEE-754 standard for double-precision floating-point arithmetic" \
+    "(53-bit mantissa)."
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

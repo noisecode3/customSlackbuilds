@@ -1,0 +1,164 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-gcc
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-gcc
+VERSION=${VERSION:-16.1.0}
+TAR_SHA=${GIT_SHA:-50efb4d94c3397aff3b0d61a5abd748b4dd31d9d3f2ab7be05b171d36a510f79}
+TAR_URL="https://ftp.gnu.org/gnu/gcc/gcc-${VERSION}/gcc-${VERSION}.tar.xz"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+STAGE1_FORCE=${STAGE1_FORCE:-NO}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+set_multilib
+
+set -e
+
+prepare_tar_source "$TAR_URL" "$TAR_SHA"
+chown -R root:root .
+find . \
+  \( -perm 777 -o -perm 775 -o -perm 754 \) \
+  -exec chmod 755 {} \+ -o \
+  \( -perm 664 \) \
+  -exec chmod 644 {} \+
+
+NUMJOBS=${NUMJOBS:-"-j$(($(nproc)+1))"}
+
+LC_64=$(cat <<'END_LC_64'
+SHLIB_LC = -L/opt/base/lib64 -Wl,-rpath,/opt/base/lib64 -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 -lc
+END_LC_64
+)
+
+LC_32=$(cat <<'END_LC_32'
+SHLIB_LC = -L/opt/base/lib -Wl,-rpath,/opt/base/lib -Wl,--dynamic-linker,/opt/base/lib/ld-linux.so.2 -lc
+END_LC_32
+)
+
+export PATH=/opt/base/bin:$PATH
+if [ -f /opt/base/include/stdio.h ] && [ "$STAGE1_FORCE" != "YES" ]; then
+    echo -e " *\n * We link to /opt/base we are bootstraping (Stage 2)\n *"
+    export PATH=/opt/base/bin:$PATH
+    export CC="/opt/base/bin/x86_64-slackware-linux-gcc"
+    export CXX="/opt/base/bin/x86_64-slackware-linux-g++"
+    EXTRA_FLAGS=" \
+      --with-native-system-header-dir=/opt/base/include \
+      --with-sysroot=/ \
+      --with-gmp=/opt/base \
+      --with-mpfr=/opt/base \
+      --with-mpc=/opt/base \
+      --disable-nls \
+    "
+    export LDFLAGS=" \
+      -L/opt/base/lib64 \
+      -Wl,-rpath,/opt/base/lib64 \
+      -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 \
+    "
+    export PKG_CONFIG_PATH=/opt/base/lib64/pkgconfig:/opt/base/lib/pkgconfig
+    export PKG_CONFIG_LIBDIR=/opt/base/lib64:/opt/base/lib
+    # shellcheck disable=SC2086
+    echo ${LC_64} >> libgcc/config/t-linux
+    # shellcheck disable=SC2086
+    echo ${LC_32} >> libgcc/config/i386/t-linux
+else
+    echo -e " *\n * We link to system root, we are bootstraping (Stage 1)\n *"
+    EXTRA_FLAGS="\
+    "
+    export LDFLAGS="\
+    "
+fi
+
+# check for multilib
+if [ "$MULTILIB" = "YES" ]; then
+  MULTILIB_FLAG="--enable-multilib"
+else
+  MULTILIB_FLAG="--disable-multilib"
+fi
+
+mkdir build
+cd build
+  # shellcheck disable=SC2086
+  CFLAGS="$SLKCFLAGS" \
+  CXXFLAGS="$SLKCFLAGS" \
+    ../configure \
+      --prefix=/opt/base \
+      --libdir="/opt/base/lib${LIBDIRSUFFIX}" \
+      --libexecdir="/opt/base/lib${LIBDIRSUFFIX}" \
+      --mandir=/usr/man \
+      --infodir=/usr/info \
+      --target="$ARCH-slackware-linux" \
+      --host="$ARCH-slackware-linux" \
+      --build="$ARCH-slackware-linux" \
+      --with-ld=/opt/base/bin/ld \
+      --with-as=/opt/base/bin/as \
+      --enable-languages=c,c++ \
+      $EXTRA_FLAGS \
+      $MULTILIB_FLAG \
+      --disable-fixincludes \
+      --disable-bootstrap
+
+  make "$NUMJOBS" || make
+  make install DESTDIR="$PKG"
+
+cd ..
+
+GCC="$PKG/opt/base/bin/x86_64-slackware-linux-gcc"
+SPECSDIR=$($GCC -print-libgcc-file-name | xargs dirname)
+$GCC -dumpspecs > "$SPECSDIR/specs"
+sed -i 's|/lib64/ld-linux-x86-64.so.2|/opt/base/lib64/ld-linux-x86-64.so.2|g' "$SPECSDIR/specs"
+sed -i 's|/lib/ld-linux.so.2|/opt/base/lib/ld-linux.so.2|g' "$SPECSDIR/specs"
+python3 -c "
+import re, sys
+f = '$SPECSDIR/specs'
+s = open(f).read()
+s = re.sub(r'(\*link:\n)', r'\1-rpath /opt/base/lib64 -rpath /opt/base/lib ', s)
+open(f, 'w').write(s)
+"
+
+rm -f "$PKG/opt/base/lib${LIBDIRSUFFIX}/"*.la
+rm -f "$PKG/opt/base/lib/"*.la
+
+strip_pkg
+
+add_version_info "$VERSION"
+gzip_info
+
+add_version_man "$VERSION"
+rm -fr "$PKG/usr/man/man7"
+gzip_man
+
+install_docs COPYING*
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (GCC package with C/C++ support)" \
+    "This package contains the compiler needed for compiling most software."
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

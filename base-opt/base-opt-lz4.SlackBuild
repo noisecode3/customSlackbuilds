@@ -1,0 +1,152 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-lz4
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-lz4
+VERSION=${VERSION:-1.10.0}
+GIT_SHA=${GIT_SHA:-ebb370ca83af193212df4dcbadcc5d87bc0de2f0}
+GIT_URL="https://github.com/lz4/lz4.git"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+use_opt_base
+set_multilib
+
+set -e
+
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
+
+ORIG_PATH=$PATH
+
+export CC="gcc -m32"
+export CXX="g++ -m32"
+export PATH=/opt/base/bin/32:/opt/base/bin:$ORIG_PATH
+export LDFLAGS=" \
+  -L/opt/base/lib \
+  -Wl,-rpath,/opt/base/lib \
+  -Wl,--dynamic-linker,/opt/base/lib/ld-linux.so.2 \
+"
+export LD=/opt/base/lib/ld-linux.so.2
+
+if [ "$MULTILIB" = "YES" ]; then
+  (
+    echo "BUILD 32-bit lz4"
+    CFLAGS="$SLKCFLAGS" \
+    CXXFLAGS="$SLKCFLAGS" \
+    cmake -B build32 \
+      -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_INSTALL_PREFIX=/opt/base \
+      -DBUILD_SHARED_LIBS=ON \
+      -DBUILD_STATIC_LIBS=OFF \
+      -DCMAKE_LINKER="$LD" \
+      -DCMAKE_C_FLAGS="-m32" \
+      -DCMAKE_ADDR2LINE=/opt/base/bin/addr2line \
+      -DCMAKE_AR=/opt/base/bin/ar \
+      -DCMAKE_C_COMPILER=/opt/base/bin/gcc \
+      -DCMAKE_C_COMPILER_AR=/opt/base/bin/gcc-ar \
+      -DCMAKE_C_COMPILER_RANLIB=/opt/base/bin/gcc-ranlib \
+      -DCMAKE_DLLTOOL=/opt/base/bin/dlltool \
+      -DCMAKE_NM=/opt/base/bin/nm \
+      -DCMAKE_OBJCOPY=/opt/base/bin/objcopy \
+      -DCMAKE_OBJDUMP=/opt/base/bin/objdump \
+      -DCMAKE_RANLIB=/opt/base/bin/ranlib \
+      -DCMAKE_READELF=/opt/base/bin/readelf \
+      -DCMAKE_BUILD_TYPE=Release build/cmake
+
+    cmake --build build32 -j"$(nproc)"
+    DESTDIR="$PKG" cmake --install build32
+    find "$PKG/opt/base/lib" -name '*.la' -delete
+  )
+fi
+
+export CC="gcc"
+export CXX="g++"
+export PATH=/opt/base/bin:$ORIG_PATH
+export LDFLAGS=" \
+  -L/opt/base/lib64 \
+  -Wl,-rpath,/opt/base/lib64 \
+  -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 \
+"
+export LD=/opt/base/lib64/ld-linux-x86-64.so.2
+
+echo "BUILD 64-bit lz4"
+
+
+CFLAGS="$SLKCFLAGS" \
+CXXFLAGS="$SLKCFLAGS" \
+cmake -B build64 \
+  -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+  -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+  -DCMAKE_INSTALL_PREFIX=/opt/base \
+  -DBUILD_SHARED_LIBS=ON \
+  -DBUILD_STATIC_LIBS=OFF \
+  -DCMAKE_LINKER="$LD" \
+  -DCMAKE_ADDR2LINE=/opt/base/bin/addr2line \
+  -DCMAKE_AR=/opt/base/bin/ar \
+  -DCMAKE_C_COMPILER=/opt/base/bin/gcc \
+  -DCMAKE_C_COMPILER_AR=/opt/base/bin/gcc-ar \
+  -DCMAKE_C_COMPILER_RANLIB=/opt/base/bin/gcc-ranlib \
+  -DCMAKE_DLLTOOL=/opt/base/bin/dlltool \
+  -DCMAKE_NM=/opt/base/bin/nm \
+  -DCMAKE_OBJCOPY=/opt/base/bin/objcopy \
+  -DCMAKE_OBJDUMP=/opt/base/bin/objdump \
+  -DCMAKE_RANLIB=/opt/base/bin/ranlib \
+  -DCMAKE_READELF=/opt/base/bin/readelf \
+  -DCMAKE_BUILD_TYPE=Release build/cmake
+
+cmake --build build64 -j"$(nproc)"
+DESTDIR="$PKG" cmake --install build64
+find "$PKG/opt/base/lib${LIBDIRSUFFIX}" -name '*.la' -delete
+
+( cd "$PKG"
+  mkdir -p usr
+  mv opt/base/share/man usr/
+)
+
+add_version_man "$VERSION"
+gzip_man
+
+strip_pkg
+install_docs LICENSE*
+ 
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (fast lossless compression algorithm)" \
+    "LZ4 is a lossless compression algorithm, providing compression speed" \
+    "> 500 MB/s per core, scalable with multi-cores CPU. It features an" \
+    "extremely fast decoder, with speed in multiple GB/s per core," \
+    "typically reaching RAM speed limits on multi-core systems." \
+    "" \
+    "Homepage: https://lz4.github.io/lz4"
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

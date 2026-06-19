@@ -1,0 +1,200 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-xz
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-xz
+VERSION=${VERSION:-5.8.3}
+GIT_SHA=${TAR_SHA:-7e7bb6c21cf9c78f95a5049242fa35aebce38ea4}
+GIT_URL="https://github.com/tukaani-project/xz.git"
+#TAR_SHA=${TAR_SHA:-fff1ffcf2b0da84d308a14de513a1aa23d4e9aa3464d17e64b9714bfdd0bbfb6}
+#TAR_URL="https://github.com/tukaani-project/xz/releases/download/v5.8.3/xz-5.8.3.tar.xz"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+OPTIMIZED=${OPTIMIZED:-NO}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+use_opt_base
+set_multilib
+
+set -e
+
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+#prepare_tar_source "$TAR_URL" "$TAR_SHA"
+set_permissions
+
+if [ "$OPTIMIZED" = "YES" ]; then
+  if [ "$ARCH" = "i586" ]; then
+    SLKCFLAGS="-O2 -march=native"
+  elif [ "$ARCH" = "i686" ]; then
+    SLKCFLAGS="-O2 -march=native"
+  elif [ "$ARCH" = "x86_64" ]; then
+    SLKCFLAGS="-O2 -march=native -fPIC"
+  else
+    SLKCFLAGS="-O2"
+  fi
+fi
+
+NUMJOBS=${NUMJOBS:-"-j$(($(nproc)+1))"}
+
+patch=$(cat <<'EOINS'
+--- ./src/xz/message.c.orig	2023-01-11 10:51:42.000000000 -0600
++++ ./src/xz/message.c	2023-01-19 13:52:39.484987693 -0600
+@@ -22,7 +22,7 @@
+ static unsigned int files_total;
+ 
+ /// Verbosity level
+-static enum message_verbosity verbosity = V_WARNING;
++static enum message_verbosity verbosity = V_ERROR;
+ 
+ /// Filename which we will print with the verbose messages
+ static const char *filename;
+EOINS
+)
+echo "$patch" | patch -p0 -F15
+
+ORIG_PATH=$PATH
+
+export CC="gcc -m32"
+export CXX="g++ -m32"
+export PATH=/opt/base/bin/32:/opt/base/bin:$ORIG_PATH
+export LDFLAGS=" \
+  -L/opt/base/lib \
+  -Wl,-rpath,/opt/base/lib \
+  -Wl,--dynamic-linker,/opt/base/lib/ld-linux.so.2 \
+"
+export LD=/opt/base/lib/ld-linux.so.2
+
+if [ "$MULTILIB" = "YES" ]; then
+  mkdir "$PKG/32"
+  (
+    echo "BUILD 32-bit xz"
+    mkdir -p build32
+    cd build32
+
+    CFLAGS="$SLKCFLAGS" \
+    CXXFLAGS="$SLKCFLAGS" \
+    cmake \
+      -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_INSTALL_PREFIX=/opt/base \
+      -DCMAKE_INSTALL_LIBDIR=lib \
+      -DBUILD_SHARED_LIBS=ON \
+      -DBUILD_TESTING=OFF \
+      -DCMAKE_C_FLAGS="-m32" \
+      -DCMAKE_ASM_FLAGS="-m32" \
+      -DCMAKE_LINKER=/opt/base/lib/ld-linux.so.2 \
+      -DCMAKE_ADDR2LINE=/opt/base/bin/addr2line \
+      -DCMAKE_AR=/opt/base/bin/ar \
+      -DCMAKE_C_COMPILER=/opt/base/bin/gcc \
+      -DCMAKE_C_COMPILER_AR=/opt/base/bin/gcc-ar \
+      -DCMAKE_C_COMPILER_RANLIB=/opt/base/bin/gcc-ranlib \
+      -DCMAKE_DLLTOOL=/opt/base/bin/dlltool \
+      -DCMAKE_NM=/opt/base/bin/nm \
+      -DCMAKE_OBJCOPY=/opt/base/bin/objcopy \
+      -DCMAKE_OBJDUMP=/opt/base/bin/objdump \
+      -DCMAKE_RANLIB=/opt/base/bin/ranlib \
+      -DCMAKE_READELF=/opt/base/bin/readelf \
+      -DCMAKE_BUILD_TYPE=Release ..
+
+    make
+    make install DESTDIR="$PKG/32"
+    rm -f "$PKG/opt/base/lib/"*.la
+  )
+fi
+
+export CC="gcc"
+export CXX="g++"
+export PATH=/opt/base/bin:$ORIG_PATH
+export LDFLAGS=" \
+  -L/opt/base/lib64 \
+  -Wl,-rpath,/opt/base/lib64 \
+  -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 \
+"
+export LD=/opt/base/lib64/ld-linux-x86-64.so.2
+
+echo "BUILD 64-bit xz"
+mkdir -p build64
+cd build64
+
+  CFLAGS="$SLKCFLAGS" \
+  CXXFLAGS="$SLKCFLAGS" \
+  cmake \
+    -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+    -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+    -DCMAKE_INSTALL_PREFIX=/opt/base \
+    -DCMAKE_INSTALL_LIBDIR=lib64 \
+    -DBUILD_SHARED_LIBS=ON \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_LINKER=/opt/base/lib/ld-linux.so.2 \
+    -DCMAKE_ADDR2LINE=/opt/base/bin/addr2line \
+    -DCMAKE_AR=/opt/base/bin/ar \
+    -DCMAKE_C_COMPILER=/opt/base/bin/gcc \
+    -DCMAKE_C_COMPILER_AR=/opt/base/bin/gcc-ar \
+    -DCMAKE_C_COMPILER_RANLIB=/opt/base/bin/gcc-ranlib \
+    -DCMAKE_DLLTOOL=/opt/base/bin/dlltool \
+    -DCMAKE_NM=/opt/base/bin/nm \
+    -DCMAKE_OBJCOPY=/opt/base/bin/objcopy \
+    -DCMAKE_OBJDUMP=/opt/base/bin/objdump \
+    -DCMAKE_RANLIB=/opt/base/bin/ranlib \
+    -DCMAKE_READELF=/opt/base/bin/readelf \
+    -DCMAKE_BUILD_TYPE=Release ..
+
+  make
+  make install DESTDIR="$PKG"
+  rm -f "$PKG/opt/base/lib${LIBDIRSUFFIX}/"*.la
+
+cd ..
+
+( cd "$PKG"
+  mv 32/opt/base/lib/ opt/base/
+  rm -fr 32
+  mkdir -p usr
+  mv opt/base/share/man usr/
+)
+
+add_version_man "$VERSION"
+gzip_man
+
+strip_pkg
+install_docs COPYING*
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (compression utility based on the LZMA algorithm)" \
+    "LZMA is a general purpose compression algorithm designed by Igor" \
+    "Pavlov as part of 7-Zip. It provides high compression ratio while" \
+    "keeping the decompression speed fast. XZ Utils are an attempt to make" \
+    "LZMA compression easy to use on free (as in freedom) operating" \
+    "systems." \
+    "" \
+    "The people most responsible for xz are Igor Pavlov, Ville Koskinen," \
+    "and Lasse Collin. Homepage: https://tukaani.org/xz/"
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

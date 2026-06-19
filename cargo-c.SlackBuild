@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Slackware build script for clipcat
+# Slackware build script for cargo-c
 
-# Copyright Martin Bångens 2024
+# Copyright Martin Bångens Sweden
 # All rights reserved.
 #
 # Redistribution and use of this script, with or without modification, is
@@ -25,10 +25,10 @@
 # shellcheck disable=SC2034
 cd "$(dirname "$0")"; CWD=$(pwd)
 
-PRGNAM=clipcat
-VERSION=${VERSION:-0.25.0}
-GIT_SHA=${GIT_SHA:-cab2d4a54b7f0a3f926ecc5fd2a6b13f176f5eac} # after 0.25.0
-GIT_URL="https://github.com/xrelkd/clipcat.git"
+PRGNAM=cargo-c
+VERSION=${VERSION:-0.10.21}
+GIT_SHA=${GIT_SHA:-16f94d5aa093116bd982f0153e3cf0a9eee2a011}
+GIT_URL="https://github.com/lu-zero/cargo-c.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -42,31 +42,31 @@ set -e
 
 prepare_git_source "$GIT_URL" "$GIT_SHA"
 set_permissions
-VERSION=$(git describe --tags --always | tr '-' '.' | sed -E 's/^v//; s/\.g[0-9a-f]*$//')
 
-mkdir -p completion
-cargo build --release
-binaries=("clipcat-menu" "clipcat-notify" "clipcatctl" "clipcatd")
-for bin in "${binaries[@]}"; do
-    "target/release/$bin" completions bash > "completion/$bin.bash"
-    "target/release/$bin" completions zsh >  "completion/$bin.zsh"
-    "target/release/$bin" completions fish > "completion/$bin.fish"
-done
+# build
+CARGO_TARGET_DIR="target" \
+LIBSSH2_SYS_USE_PKG_CONFIG=1 \
+LIBSQLITE3_SYS_USE_PKG_CONFIG=1 \
+  cargo build --release
 
-install -Dm755 -t "$PKG/usr/bin" "${binaries[@]/#/target/release/}"
-for bin in "${binaries[@]}"; do
-    install -Dm644 "completion/$bin.bash" "${PKG}/usr/share/bash-completion/completions/$bin"
-    install -Dm644 "completion/$bin.zsh" "${PKG}/usr/share/zsh/site-functions/_$bin"
-    install -Dm644 "completion/$bin.fish" "${PKG}/usr/share/fish/vendor_completions.d/$bin.fish"
-done
+# install
+mkdir -p "$PKG/usr/bin"
+find "target/release" -maxdepth 1 -type f -executable -exec \
+  install -D -m755 -t "$PKG/usr/bin" {} +
 
 strip_pkg
 install_docs LICENSE README.md
 
 #   |-----handy-ruler------------------------------------------------------|
 write_slack_desc "$PKG" "$PRGNAM" \
-    "$PRGNAM (Clipcat clipboard manager)" \
-    "A clipboard manager written in Rust Programming Language."
+    "$PRGNAM (cargo C-ABI helper)" \
+    "cargo-c is an extension for Cargo, the Rust package manager, that" \
+    "helps to build and install C-ABI compatible dynamic and static" \
+    "libraries. It produces and installs a correct pkg-config file, a" \
+    "static library and a dynamic library, and a C header to be used" \
+    "by any C (and C-compatible) software." \
+    "" \
+    "Homepage: https://github.com/lu-zero/cargo-c"
 
 cd "$PKG"
 /sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

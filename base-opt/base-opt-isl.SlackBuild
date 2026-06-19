@@ -1,0 +1,126 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-isl
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-isl
+VERSION=${VERSION:-0.27}
+TAR_SHA=${GIT_SHA:-6d8babb59e7b672e8cb7870e874f3f7b813b6e00e6af3f8b04f7579965643d5c}
+TAR_URL="https://libisl.sourceforge.io/isl-${VERSION}.tar.xz"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+NUMJOBS=${NUMJOBS:-"-j$(($(nproc)+1))"}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+set_multilib
+
+set -e
+
+prepare_tar_source "$TAR_URL" "$TAR_SHA"
+set_permissions
+
+export PATH=/opt/base/bin:$PATH
+
+export CC="gcc -m32"
+export CXX="g++ -m32"
+export LDFLAGS=" \
+  -L/opt/base/lib \
+  -Wl,-rpath,/opt/base/lib \
+  -Wl,--dynamic-linker,/opt/base/lib/ld-linux.so.2 \
+"
+export CC_FOR_BUILD=$CC
+export LDFLAGS_FOR_BUILD=$LDFLAGS
+export PKG_CONFIG_PATH=/opt/base/lib/pkgconfig
+export PKG_CONFIG_LIBDIR=/opt/base/lib/pkgconfig
+
+if [ "$MULTILIB" = "YES" ]; then
+  echo "BUILD 32-bit isl"
+  CXXFLAGS="$SLKCFLAGS" \
+  CFLAGS="$SLKCFLAGS" \
+  ./configure \
+    --prefix=/opt/base \
+    --libdir=/opt/base/lib \
+    --sysconfdir=/opt/base/etc \
+    --infodir=/usr/info \
+    --docdir="/usr/doc/$PRGNAM-$VERSION" \
+    --mandir=/usr/man \
+    --disable-static \
+    --build=i686-slackware-linux \
+    --host="$ARCH-slackware-linux"
+
+  make "$NUMJOBS" || make
+  make install DESTDIR="$PKG"
+  make distclean 
+  find "$PKG/opt/base/lib" -name '*.la' -delete
+fi
+
+export CC="gcc"
+export CXX="g++"
+export LDFLAGS=" \
+  -L/opt/base/lib64 \
+  -Wl,-rpath,/opt/base/lib64 \
+  -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 \
+"
+export CC_FOR_BUILD=$CC
+export LDFLAGS_FOR_BUILD=$LDFLAGS
+export PKG_CONFIG_PATH=/opt/base/lib64/pkgconfig
+export PKG_CONFIG_LIBDIR=/opt/base/lib64/pkgconfig
+
+echo "BUILD 64-bit isl"
+CFLAGS="$SLKCFLAGS" \
+./configure \
+  --prefix=/opt/base \
+  --libdir="/opt/base/lib${LIBDIRSUFFIX}" \
+  --sysconfdir=/opt/base/etc \
+  --infodir=/usr/info \
+  --docdir="/usr/doc/$PRGNAM-$VERSION" \
+  --mandir=/usr/man \
+  --disable-static \
+  --build="$ARCH-slackware-linux" \
+  --host="$ARCH-slackware-linux"
+
+make "$NUMJOBS"
+make install DESTDIR="$PKG"
+find "$PKG/opt/base/lib${LIBDIRSUFFIX}" -name '*.la' -delete
+
+install_docs AUTHORS LICENSE
+strip_pkg
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (Integer Set Library)" \
+    "isl is a thread-safe C library for manipulating sets and relations" \
+    "of integer points bounded by affine constraints. The descriptions of" \
+    "the sets and relations may involve both parameters and existentially" \
+    "quantified variables. All computations are performed in exact integer" \
+    "arithmetic using GMP." \
+    "" \
+    "Homepage: https://libisl.sourceforge.io"
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

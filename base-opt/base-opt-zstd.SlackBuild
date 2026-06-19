@@ -1,0 +1,207 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-zstd
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-zstd
+VERSION=${VERSION:-1.5.7}
+GIT_SHA=${GIT_SHA:-f8745da6ff1ad1e7bab384bd1f9d742439278e99}
+GIT_URL="https://github.com/facebook/zstd.git"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+use_opt_base
+set_multilib
+
+set -e
+
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
+
+NUMJOBS=${NUMJOBS:-"-j$(($(nproc)+1))"}
+
+patch=$(cat <<'EOINS'
+--- ./contrib/pzstd/Makefile.orig	2018-12-29 22:36:55.196425576 -0600
++++ ./contrib/pzstd/Makefile	2018-12-29 22:37:54.123426836 -0600
+@@ -171,8 +171,8 @@
+ 	$(TESTPROG) ./test/RoundTripTest$(EXT) $(TESTFLAGS)
+ 
+ # Build the main binary
+-pzstd$(EXT): main.o $(PROGDIR)/util.o Options.o Pzstd.o SkippableFrame.o $(ZSTDDIR)/libzstd.a
+-	$(LD_COMMAND)
++pzstd$(EXT): main.o $(PROGDIR)/util.o Options.o Pzstd.o SkippableFrame.o
++	$(LD_COMMAND) -L ../../lib -lzstd
+ 
+ # Target that depends on all the tests
+ .PHONY: tests
+EOINS
+)
+echo "$patch" | patch -p0 -F15
+
+
+ORIG_PATH=$PATH
+
+export CC="gcc -m32"
+export CXX="g++ -m32"
+export PATH=/opt/base/bin/32:/opt/base/bin:$ORIG_PATH
+export LDFLAGS=" \
+  -L/opt/base/lib \
+  -Wl,-rpath,/opt/base/lib \
+  -Wl,--dynamic-linker,/opt/base/lib/ld-linux.so.2 \
+"
+export LD=/opt/base/lib/ld-linux.so.2
+
+
+if [ "$MULTILIB" = "YES" ]; then
+  (
+    echo "BUILD 32-bit lz4"
+    CFLAGS="$SLKCFLAGS" \
+    CXXFLAGS="$SLKCFLAGS" \
+    cmake -B build32 \
+      -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_INSTALL_PREFIX=/opt/base \
+      -DCMAKE_INSTALL_LIBDIR="lib" \
+      -DMAN_INSTALL_DIR=/usr/man/man1 \
+      -DBUILD_SHARED_LIBS=ON \
+      -DZSTD_BUILD_STATIC=OFF \
+      -DZSTD_PROGRAMS_LINK_SHARED=ON \
+      -DZSTD_LZ4_SUPPORT=ON \
+      -DLIBLZ4_INCLUDE_DIR=/opt/base/include \
+      -DLIBLZ4_LIBRARY=/opt/base/lib/liblz4.so \
+      -DZSTD_LZMA_SUPPORT=ON \
+      -DLIBLZMA_INCLUDE_DIR=/opt/base/include \
+      -DLIBLZMA_LIBRARY_RELEASE=/opt/base/lib/liblzma.so \
+      -DZSTD_ZLIB_SUPPORT=ON \
+      -DZLIB_INCLUDE_DIR=/opt/base/include \
+      -DZLIB_LIBRARY_RELEASE=/opt/base/lib/libz.so \
+      -DCMAKE_LINKER="$LD" \
+      -DCMAKE_C_FLAGS="-m32" \
+      -DCMAKE_ASM_FLAGS="-m32" \
+      -DCMAKE_ADDR2LINE=/opt/base/bin/addr2line \
+      -DCMAKE_AR=/opt/base/bin/ar \
+      -DCMAKE_C_COMPILER=/opt/base/bin/gcc \
+      -DCMAKE_C_COMPILER_AR=/opt/base/bin/gcc-ar \
+      -DCMAKE_C_COMPILER_RANLIB=/opt/base/bin/gcc-ranlib \
+      -DCMAKE_DLLTOOL=/opt/base/bin/dlltool \
+      -DCMAKE_NM=/opt/base/bin/nm \
+      -DCMAKE_OBJCOPY=/opt/base/bin/objcopy \
+      -DCMAKE_OBJDUMP=/opt/base/bin/objdump \
+      -DCMAKE_RANLIB=/opt/base/bin/ranlib \
+      -DCMAKE_READELF=/opt/base/bin/readelf \
+      -DCMAKE_BUILD_TYPE=Release build/cmake
+
+    cmake --build build32 -j"$(nproc)"
+    DESTDIR="$PKG" cmake --install build32
+    find "$PKG/opt/base/lib" -name '*.a' -delete
+    sed -i 's|${_IMPORT_PREFIX}|/opt/base|g' \
+      "$PKG/opt/base/lib/cmake/zstd/zstdTargets-release.cmake"
+  )
+fi
+
+export CC="gcc"
+export CXX="g++"
+export PATH=/opt/base/bin:$ORIG_PATH
+export LDFLAGS=" \
+  -L/opt/base/lib64 \
+  -Wl,-rpath,/opt/base/lib64 \
+  -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 \
+"
+export LD=/opt/base/lib64/ld-linux-x86-64.so.2
+
+echo "BUILD 64-bit lz4"
+
+
+CFLAGS="$SLKCFLAGS" \
+CXXFLAGS="$SLKCFLAGS" \
+cmake -B build64 \
+  -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+  -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+  -DCMAKE_INSTALL_PREFIX=/opt/base \
+  -DCMAKE_INSTALL_LIBDIR="lib$LIBDIRSUFFIX" \
+  -DDOC_INSTALL_DIR="doc" \
+  -DMAN_INSTALL_DIR=/usr/man/man1 \
+  -DBUILD_SHARED_LIBS=ON \
+  -DBUILD_STATIC_LIBS=OFF \
+  -DZSTD_BUILD_STATIC=OFF \
+  -DZSTD_PROGRAMS_LINK_SHARED=ON \
+  -DZSTD_LZ4_SUPPORT=ON \
+  -DZSTD_LZMA_SUPPORT=ON \
+  -DZSTD_ZLIB_SUPPORT=ON \
+  -DCMAKE_LINKER="$LD" \
+  -DCMAKE_ADDR2LINE=/opt/base/bin/addr2line \
+  -DCMAKE_AR=/opt/base/bin/ar \
+  -DCMAKE_C_COMPILER=/opt/base/bin/gcc \
+  -DCMAKE_C_COMPILER_AR=/opt/base/bin/gcc-ar \
+  -DCMAKE_C_COMPILER_RANLIB=/opt/base/bin/gcc-ranlib \
+  -DCMAKE_DLLTOOL=/opt/base/bin/dlltool \
+  -DCMAKE_NM=/opt/base/bin/nm \
+  -DCMAKE_OBJCOPY=/opt/base/bin/objcopy \
+  -DCMAKE_OBJDUMP=/opt/base/bin/objdump \
+  -DCMAKE_RANLIB=/opt/base/bin/ranlib \
+  -DCMAKE_READELF=/opt/base/bin/readelf \
+  -DCMAKE_BUILD_TYPE=Release build/cmake
+
+cmake --build build64 -j"$(nproc)"
+DESTDIR="$PKG" cmake --install build64
+find "$PKG/opt/base/lib${LIBDIRSUFFIX}" -name '*.a' -delete
+sed -i 's|${_IMPORT_PREFIX}|/opt/base|g' \
+  "$PKG/opt/base/lib${LIBDIRSUFFIX}/cmake/zstd/zstdTargets-release.cmake"
+
+# Compile and install pzstd:
+make "$NUMJOBS" CFLAGS="$SLKCFLAGS" -C contrib/pzstd
+install -Dm755 contrib/pzstd/pzstd "$PKG/usr/bin/pzstd"
+
+
+
+# zstdmt as the same as zstd, so just make a symlink:
+( cd "$PKG/usr/bin"
+  ln -sf zstd zstdmt
+)
+
+add_version_man "$VERSION"
+gzip_man
+
+strip_pkg
+install_docs COPYING* LICENSE
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (real-time compression algorithm)" \
+    "Zstandard, or zstd for short, is a real-time compression algorithm" \
+    "providing high compression ratios. It offers a very wide range of" \
+    "compression/speed trade-off, while being backed by a very fast" \
+    "decoder. It also offers a special mode for small data, called" \
+    "dictionary compression, and can create dictionaries from any sample" \
+    "set." \
+    "" \
+    "Homepage: http://zstd.net/"
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

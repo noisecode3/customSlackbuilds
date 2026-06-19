@@ -1,0 +1,159 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-jansson
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-jansson
+VERSION=${VERSION:-2.15.0}
+GIT_SHA=${GIT_SHA:-4a9a6db73d5dc553164992e87426502ab2d54512}
+GIT_URL="https://github.com/akheron/jansson.git"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+use_opt_base
+set_multilib
+
+set -e
+
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
+
+NUMJOBS=${NUMJOBS:-"-j$(($(nproc)+1))"}
+
+ORIG_PATH=$PATH
+
+export CC="gcc -m32"
+export CXX="g++ -m32"
+export PATH=/opt/base/bin/32:/opt/base/bin:$ORIG_PATH
+export LDFLAGS=" \
+  -L/opt/base/lib \
+  -Wl,-rpath,/opt/base/lib \
+  -Wl,--dynamic-linker,/opt/base/lib/ld-linux.so.2 \
+"
+export LD=/opt/base/lib/ld-linux.so.2
+
+if [ "$MULTILIB" = "YES" ]; then
+  (
+    echo "BUILD 32-bit jansson"
+    mkdir -p build32
+    cd build32
+
+    CFLAGS="$SLKCFLAGS" \
+    CXXFLAGS="$SLKCFLAGS" \
+
+    cmake \
+      -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_INSTALL_PREFIX=/opt/base \
+      -DJANSSON_INSTALL_CMAKE_DIR="/opt/base/lib/cmake/jansson" \
+      -DJANSSON_INSTALL_LIB_DIR="lib" \
+      -DJANSSON_BUILD_DOCS=OFF \
+      -DJANSSON_BUILD_SHARED_LIBS=ON \
+      -DBUILD_SHARED_LIBS=ON \
+      -DCMAKE_C_FLAGS="-m32" \
+      -DCMAKE_LINKER=/opt/base/lib/ld-linux.so.2 \
+      -DCMAKE_ADDR2LINE=/opt/base/bin/addr2line \
+      -DCMAKE_AR=/opt/base/bin/ar \
+      -DCMAKE_C_COMPILER=/opt/base/bin/gcc \
+      -DCMAKE_C_COMPILER_AR=/opt/base/bin/gcc-ar \
+      -DCMAKE_C_COMPILER_RANLIB=/opt/base/bin/gcc-ranlib \
+      -DCMAKE_DLLTOOL=/opt/base/bin/dlltool \
+      -DCMAKE_NM=/opt/base/bin/nm \
+      -DCMAKE_OBJCOPY=/opt/base/bin/objcopy \
+      -DCMAKE_OBJDUMP=/opt/base/bin/objdump \
+      -DCMAKE_RANLIB=/opt/base/bin/ranlib \
+      -DCMAKE_READELF=/opt/base/bin/readelf \
+      -DCMAKE_BUILD_TYPE=Release ..
+
+    make
+    make install DESTDIR="$PKG"
+    rm -f "$PKG/opt/base/lib/"*.la
+  )
+fi
+
+export CC="gcc"
+export CXX="g++"
+export PATH=/opt/base/bin:$ORIG_PATH
+export LDFLAGS=" \
+  -L/opt/base/lib64 \
+  -Wl,-rpath,/opt/base/lib64 \
+  -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 \
+"
+export LD=/opt/base/lib64/ld-linux-x86-64.so.2
+
+echo "BUILD 64-bit jansson"
+mkdir -p build64
+cd build64
+
+  CFLAGS="$SLKCFLAGS" \
+  CXXFLAGS="$SLKCFLAGS" \
+  cmake \
+    -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+    -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+    -DCMAKE_INSTALL_PREFIX=/opt/base \
+    -DJANSSON_INSTALL_CMAKE_DIR="/opt/base/lib${LIBDIRSUFFIX}/cmake/jansson" \
+    -DJANSSON_INSTALL_LIB_DIR="lib${LIBDIRSUFFIX}" \
+    -DJANSSON_BUILD_DOCS=OFF \
+    -DJANSSON_BUILD_SHARED_LIBS=ON \
+    -DBUILD_SHARED_LIBS=ON \
+    -DCMAKE_LINKER=/opt/base/lib/ld-linux.so.2 \
+    -DCMAKE_ADDR2LINE=/opt/base/bin/addr2line \
+    -DCMAKE_AR=/opt/base/bin/ar \
+    -DCMAKE_C_COMPILER=/opt/base/bin/gcc \
+    -DCMAKE_C_COMPILER_AR=/opt/base/bin/gcc-ar \
+    -DCMAKE_C_COMPILER_RANLIB=/opt/base/bin/gcc-ranlib \
+    -DCMAKE_DLLTOOL=/opt/base/bin/dlltool \
+    -DCMAKE_NM=/opt/base/bin/nm \
+    -DCMAKE_OBJCOPY=/opt/base/bin/objcopy \
+    -DCMAKE_OBJDUMP=/opt/base/bin/objdump \
+    -DCMAKE_RANLIB=/opt/base/bin/ranlib \
+    -DCMAKE_READELF=/opt/base/bin/readelf \
+    -DCMAKE_BUILD_TYPE=Release ..
+
+  make
+  make install DESTDIR="$PKG"
+  rm -f "$PKG/opt/base/lib${LIBDIRSUFFIX}/"*.la
+
+cd ..
+
+strip_pkg
+install_docs LICENSE
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (JSON data handling library)" \
+    "Jansson is a C library for encoding, decoding and manipulating JSON" \
+    "data. It features a simple and intuitive API and data model, includes" \
+    "full Unicode support, and has no dependencies on other libraries" \
+    "(except for glibc)" \
+    "" \
+    "Homepage: https://www.digip.org/jansson/"
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

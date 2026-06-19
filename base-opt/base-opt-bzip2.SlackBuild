@@ -1,0 +1,175 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-bzip2
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-bzip2
+VERSION=${VERSION:-1.0.8}
+GIT_SHA=${TAR_SHA:-35d122a3df8b0cc4082a4d89fdc6ee99f375fe67}
+GIT_URL="https://sourceware.org/git/bzip2.git"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+NUMJOBS=${NUMJOBS:-"-j$(($(nproc)+1))"}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+set_multilib
+
+set -e
+
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
+
+patch=$(cat <<'EOINS'
+--- ./Makefile-libbz2_so.orig	2019-06-28 13:18:39.579977418 -0500
++++ ./Makefile-libbz2_so	2019-06-28 13:20:04.753971278 -0500
+@@ -35,13 +35,13 @@
+       bzlib.o
+ 
+ all: $(OBJS)
+-	$(CC) -shared -Wl,-soname -Wl,libbz2.so.1.0 -o libbz2.so.1.0.8 $(OBJS)
++	$(CC) -shared -Wl,-soname -Wl,libbz2.so.1 -o libbz2.so.1.0.8 $(OBJS)
+ 	$(CC) $(CFLAGS) -o bzip2-shared bzip2.c libbz2.so.1.0.8
+-	rm -f libbz2.so.1.0
+-	ln -s libbz2.so.1.0.8 libbz2.so.1.0
++	rm -f libbz2.so.1
++	ln -s libbz2.so.1.0.8 libbz2.so.1
+ 
+ clean: 
+-	rm -f $(OBJS) bzip2.o libbz2.so.1.0.8 libbz2.so.1.0 bzip2-shared
++	rm -f $(OBJS) bzip2.o libbz2.so.1.0.8 libbz2.so.1 bzip2-shared
+ 
+ blocksort.o: blocksort.c
+ 	$(CC) $(CFLAGS) -c blocksort.c
+EOINS
+)
+echo "$patch" | patch -p0 -F15
+
+pkgconfig_=$(cat <<'EOINS'
+prefix=/opt/base
+exec_prefix=/opt/base
+bindir=/opt/base/bin
+libdir=
+includedir=/opt/base/include
+
+Name: bzip2
+Description: A file compression library
+Version: 1.0.8
+Libs: -L${libdir} -lbz2
+Cflags: -I${includedir}
+EOINS
+)
+file_name="$PKG/opt/base/lib${LIBDIRSUFFIX}/pkgconfig/bzip2.pc"
+file_name32="$PKG/opt/base/lib/pkgconfig/bzip2.pc"
+
+# Shared lib
+if [ "$MULTILIB" = "YES" ]; then
+  export PATH=/opt/base/bin:$PATH
+  export CC="gcc -m32"
+  export CXX="g++ -m32"
+  export LDFLAGS=" \
+    -L/opt/base/lib \
+    -Wl,-rpath,/opt/base/lib \
+    -Wl,--dynamic-linker,/opt/base/lib/ld-linux.so.2 \
+  "
+  make -f Makefile-libbz2_so clean
+  make -f Makefile-libbz2_so CC="$CC $SLKCFLAGS $LDFLAGS"
+  install -Dm755 "libbz2.so.$VERSION" "$PKG/opt/base/lib/libbz2.so.$VERSION"
+  ln -sf "libbz2.so.$VERSION"         "$PKG/opt/base/lib/libbz2.so.1.0"
+  ln -sf libbz2.so.1.0    "$PKG/opt/base/lib/libbz2.so.1"
+  ln -sf libbz2.so.1      "$PKG/opt/base/lib/libbz2.so"
+  mkdir -p "$PKG/opt/base/lib/pkgconfig"
+  echo "$pkgconfig_" > "$file_name32"
+  chmod 0644 "$file_name32"
+  sed -i "s|libdir=|libdir=/opt/base/lib|g" "$file_name32"
+fi
+
+export CC="gcc"
+export CXX="g++"
+export LDFLAGS=" \
+  -L/opt/base/lib64 \
+  -Wl,-rpath,/opt/base/lib64 \
+  -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 \
+"
+
+make -f Makefile-libbz2_so clean
+make -f Makefile-libbz2_so CC="$CC $SLKCFLAGS $LDFLAGS"
+install -Dm755 "libbz2.so.$VERSION" "$PKG/opt/base/lib${LIBDIRSUFFIX}/libbz2.so.$VERSION"
+
+# Build
+make "$NUMJOBS" CC="$CC $SLKCFLAGS $LDFLAGS"
+
+# Headers
+install -Dm644 bzlib.h "$PKG/opt/base/include/bzlib.h"
+
+# Binaries
+install -Dm755 bzip2-shared "$PKG/opt/base/bin/bzip2"
+install -Dm755 bzip2recover "$PKG/opt/base/bin/bzip2recover"
+
+# Man pages
+install -Dm644 bzip2.1 "$PKG/usr/man/man1/bzip2.1"
+printf '.so man1/bzip2.1\n' > "$PKG/usr/man/man1/bzip2recover.1"
+gzip -9 "$PKG/usr/man/man1/"*.1
+
+# pkgconfig
+mkdir -p "$PKG/opt/base/lib${LIBDIRSUFFIX}/pkgconfig"
+echo "$pkgconfig_" > "$file_name"
+chmod 0644 "$file_name"
+sed -i "s|libdir=|libdir=/opt/base/lib${LIBDIRSUFFIX}|g" "$file_name"
+
+# Symlinks
+ln -sf "libbz2.so.$VERSION"  "$PKG/opt/base/lib${LIBDIRSUFFIX}/libbz2.so.1.0"
+ln -sf libbz2.so.1.0         "$PKG/opt/base/lib${LIBDIRSUFFIX}/libbz2.so.1"
+ln -sf "../../lib${LIBDIRSUFFIX}/libbz2.so.1"  "$PKG/opt/base/lib${LIBDIRSUFFIX}/libbz2.so"
+
+ln -sf bzip2  "$PKG/opt/base/bin/bunzip2"
+ln -sf bzip2  "$PKG/opt/base/bin/bzcat"
+
+install -dm755 "$PKG/opt/base/bin"
+ln -sf bzip2    "$PKG/opt/base/bin/bzip2"
+ln -sf bzip2    "$PKG/opt/base/bin/bunzip2"
+ln -sf bzip2    "$PKG/opt/base/bin/bzcat"
+ln -sf bzmore   "$PKG/opt/base/bin/bzless"
+
+add_version_man "$VERSION"
+
+install_docs LICENSE
+strip_pkg
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (a block-sorting file compressor)" \
+    "Bzip2 compresses files using the Burrows-Wheeler block sorting text" \
+    "compression algorithm, and Huffman coding. Compression is generally" \
+    "considerably better than that achieved by more conventional LZ77/LZ78-" \
+    "based compressors, and approaches the performance of the PPM family of" \
+    "statistical compressors." \
+    "" \
+    "Julian Seward <jseward@acm.org> is the author of bzip2."
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

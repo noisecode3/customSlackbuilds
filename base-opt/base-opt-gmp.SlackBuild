@@ -1,0 +1,149 @@
+#!/bin/bash
+
+# Slackware build script for base-opt-gmp
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=base-opt-gmp
+VERSION=${VERSION:-6.3.0}
+TAR_SHA=${GIT_SHA:-be5c908a7a836c3a9bd9d62aa58563c5e9e7fef94c43a7f42dbc35bb6d02733c}
+TAR_URL="https://gmplib.org/download/gmp/gmp-${VERSION}.tar.lz"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+NUMJOBS=${NUMJOBS:-"-j$(($(nproc)+1))"}
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+set_multilib
+set -e
+prepare_tar_source "$TAR_URL" "$TAR_SHA"
+set_permissions
+
+sed -i 's/void g(){}/void g(int,t1 const*,t1,t2,t1 const*,int){}/' configure
+
+export PATH=/opt/base/bin:$PATH
+
+if [ "$MULTILIB" = "YES" ]; then
+  echo "BUILD 32-bit gmp"
+  export CC="gcc -m32"
+  export CXX="g++ -m32"
+  export LDFLAGS=" \
+    -L/opt/base/lib \
+    -Wl,-rpath,/opt/base/lib \
+    -Wl,--dynamic-linker,/opt/base/lib/ld-linux.so.2 \
+  "
+  export PKG_CONFIG_PATH=/opt/base/lib/pkgconfig
+  export PKG_CONFIG_LIBDIR=/opt/base/lib/pkgconfig
+
+  CFLAGS="$SLKCFLAGS" \
+  ./configure \
+    cross_compiling=yes \
+    ABI=32 \
+    --prefix=/opt/base \
+    --libdir=/opt/base/lib \
+    --infodir=/usr/info \
+    --with-gnu-ld \
+    --enable-cxx \
+    --disable-static \
+    --host="$ARCH-slackware-linux" \
+    --build=i686-slackware-linux
+  make "$NUMJOBS" || make
+  make install DESTDIR="$PKG"
+  make distclean
+  find "$PKG/opt/base/lib" -name '*.la' -delete
+
+  mv "$PKG/opt/base/include/gmp.h" \
+     "$PKG/opt/base/include/gmp-i386.h"
+  mv "$PKG/opt/base/include/gmpxx.h" \
+     "$PKG/opt/base/include/gmpxx-i386.h"
+fi
+
+echo "BUILD 64-bit gmp"
+export CC="gcc"
+export CXX="g++"
+export LDFLAGS=" \
+  -L/opt/base/lib64 \
+  -Wl,-rpath,/opt/base/lib64 \
+  -Wl,--dynamic-linker,/opt/base/lib64/ld-linux-x86-64.so.2 \
+"
+export PKG_CONFIG_PATH=/opt/base/lib64/pkgconfig
+export PKG_CONFIG_LIBDIR=/opt/base/lib64/pkgconfig
+
+CFLAGS="$SLKCFLAGS" \
+./configure \
+  cross_compiling=yes \
+  ABI=64 \
+  --prefix=/opt/base \
+  --libdir="/opt/base/lib${LIBDIRSUFFIX}" \
+  --infodir=/usr/info \
+  --with-gnu-ld \
+  --enable-cxx \
+  --disable-static \
+  --host="$ARCH-slackware-linux" \
+  --build="$ARCH-slackware-linux"
+
+make "$NUMJOBS"
+make install DESTDIR="$PKG"
+find "$PKG/opt/base/lib${LIBDIRSUFFIX}" -name '*.la' -delete
+
+mv "$PKG/opt/base/include/gmp.h" \
+   "$PKG/opt/base/include/gmp-x86_64.h"
+mv "$PKG/opt/base/include/gmpxx.h" \
+   "$PKG/opt/base/include/gmpxx-x86_64.h"
+
+# biarch wrapper-headers
+cat > "$PKG/opt/base/include/gmp.h" << 'EOF'
+#if defined(__x86_64__)
+#  include <gmp-x86_64.h>
+#elif defined(__i386__)
+#  include <gmp-i386.h>
+#else
+#  error "base-opt-gmp: unsupported architecture"
+#endif
+EOF
+
+cat > "$PKG/opt/base/include/gmpxx.h" << 'EOF'
+/* Biarch wrapper för gmpxx.h — genererad av base-opt-gmp SlackBuild */
+#if defined(__x86_64__)
+#  include <gmpxx-x86_64.h>
+#elif defined(__i386__)
+#  include <gmpxx-i386.h>
+#else
+#  error "base-opt-gmp: unsupported architecture"
+#endif
+EOF
+
+add_version_info "$VERSION"
+gzip_info
+install_docs AUTHORS COPYING*
+strip_pkg
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (GNU multiple precision arithmetic library)" \
+    "GNU MP is a library for arbitrary precision arithmetic, operating on" \
+    "signed integers, rational numbers, and floating point numbers. It has" \
+    "a rich set of functions, and the functions have a regular interface."
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
