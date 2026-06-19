@@ -79,6 +79,8 @@ only_C_en_US_locale() {
     ! -name 'en_US' \
     ! -name 'C.utf8' \
     ! -name 'en_US.utf8' \
+    ! -name 'en@boldquot' \
+    ! -name 'en@quot' \
     -exec rm -rf -- {} +
 }
 

@@ -68,7 +68,7 @@ CFLAGS="$SLKCFLAGS" \
   --libdir="/opt/base/lib${LIBDIRSUFFIX}" \
   --mandir=/usr/man \
   --infodir=/usr/info \
-  --docdir="/usr/doc/base-opt-libfl-${VERSION}" \
+  --docdir="/usr/doc/${PRGNAM}-${VERSION}" \
   --build="$ARCH-slackware-linux"
 
 # Build and install:
@@ -77,12 +77,14 @@ make install DESTDIR="$PKG"
 
 # Don't ship .la files and only lib files:
 rm -f  "$PKG/opt/base/lib${LIBDIRSUFFIX}/"*.la
-rm -f  "$PKG/usr/doc/base-opt-libfl-${VERSION}/"{NEWS,ONEWS,README.md}
+
+# Clean up flex we just use libfl
+rm -f  "$PKG/usr/doc/${PRGNAM}-${VERSION}/"{NEWS,ONEWS,README.md}
 rm -fr "$PKG/opt/base/bin"
 rm -fr "$PKG/usr/man"
 rm -fr "$PKG/usr/info"
 
-only_C_en_US_locale
+only_C_en_US_locale "$PKG/opt/base/share/locale"
 install_docs
 strip_pkg
 
