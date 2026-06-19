@@ -128,18 +128,20 @@ cd build
 
 cd ..
 
-GCC="$PKG/opt/base/bin/x86_64-slackware-linux-gcc"
-SPECSDIR=$($GCC -print-libgcc-file-name | xargs dirname)
-$GCC -dumpspecs > "$SPECSDIR/specs"
-sed -i 's|/lib64/ld-linux-x86-64.so.2|/opt/base/lib64/ld-linux-x86-64.so.2|g' "$SPECSDIR/specs"
-sed -i 's|/lib/ld-linux.so.2|/opt/base/lib/ld-linux.so.2|g' "$SPECSDIR/specs"
-python3 -c "
+if [ -f /opt/base/include/stdio.h ] && [ "$STAGE1_FORCE" != "YES" ]; then
+    GCC="$PKG/opt/base/bin/x86_64-slackware-linux-gcc"
+    SPECSDIR=$($GCC -print-libgcc-file-name | xargs dirname)
+    $GCC -dumpspecs > "$SPECSDIR/specs"
+    sed -i 's|/lib64/ld-linux-x86-64.so.2|/opt/base/lib64/ld-linux-x86-64.so.2|g' "$SPECSDIR/specs"
+    sed -i 's|/lib/ld-linux.so.2|/opt/base/lib/ld-linux.so.2|g' "$SPECSDIR/specs"
+    python3 -c "
 import re, sys
 f = '$SPECSDIR/specs'
 s = open(f).read()
 s = re.sub(r'(\*link:\n)', r'\1-rpath /opt/base/lib64 -rpath /opt/base/lib ', s)
 open(f, 'w').write(s)
 "
+fi
 
 rm -f "$PKG/opt/base/lib${LIBDIRSUFFIX}/"*.la
 rm -f "$PKG/opt/base/lib/"*.la
