@@ -36,7 +36,6 @@ PKGTYPE=${PKGTYPE:-tgz}
 # shellcheck disable=SC1091
 source helpers/bash_funktions
 
-use_opt_base
 set_multilib
 
 set -e
@@ -80,7 +79,7 @@ export LD=/opt/base/lib/ld-linux.so.2
 
 if [ "$MULTILIB" = "YES" ]; then
   (
-    echo "BUILD 32-bit lz4"
+    echo "BUILD 32-bit zstd"
     CFLAGS="$SLKCFLAGS" \
     CXXFLAGS="$SLKCFLAGS" \
     cmake -B build32 \
@@ -135,7 +134,7 @@ export LDFLAGS=" \
 "
 export LD=/opt/base/lib64/ld-linux-x86-64.so.2
 
-echo "BUILD 64-bit lz4"
+echo "BUILD 64-bit zstd"
 
 
 CFLAGS="$SLKCFLAGS" \

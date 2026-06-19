@@ -45,8 +45,8 @@ Notice how we rebuild gcc after glibc.
 | `base-opt-gcc`       | Against system glibc, needed to build new glibc (Stage 1)|
 | `base-opt-glibc`     | Build once (Stageless)                                   |
 | `base-opt-zlib`      | Build once (Stageless)                                   |
-| `base-opt-xz  `      | Build once (Stageless)                                   |
-| `base-opt-lz4  `     | Build once (Stageless)                                   |
+| `base-opt-xz`        | Build once (Stageless)                                   |
+| `base-opt-lz4`       | Build once (Stageless)                                   |
 | `base-opt-zstd`      | Build once (Stageless)                                   |
 | `base-opt-jansson`   | Build once (Stageless)                                   |
 | `base-opt-bzip2`     | Build once (Stageless)                                   |
@@ -104,16 +104,20 @@ Verify the finished binary before packaging:
 # Should resolve libraries under /opt/base exexpt if you installe others in /opt or /home
 # But they should not mix with /usr/lib{64,} /lib{64,}
 # Not if you did not run export PATH=/opt/base/bin:$PATH it will report wrong glibc
-ldd ./your-binary
-./your-binary: /lib64/ld-linux-x86-64.so.2: version `GLIBC_2.35' not found (required by /opt/base/lib64/libc.so.6)
-	linux-vdso.so.1 (0x00007fbde6e9e000)
-	libc.so.6 => /opt/base/lib64/libc.so.6 (0x00007fbde6a00000)
-	/opt/base/lib64/ld-linux-x86-64.so.2 => /lib64/ld-linux-x86-64.so.2 (0x00007fbde6ea0000)
+/opt/base/bin/ldd ./your-binary
+	linux-vdso.so.1 (0x00007f8009ec7000)
+	libzstd.so.1 => /opt/base/lib64/libzstd.so.1 (0x00007f8009da1000)
+	libz.so.1 => /opt/base/lib64/libz.so.1 (0x00007f8009d86000)
+	liblzma.so.5 => /opt/base/lib64/liblzma.so.5 (0x00007f8009d54000)
+	liblz4.so.1 => /opt/base/lib64/liblz4.so.1 (0x00007f8009d14000)
+	libc.so.6 => /opt/base/lib64/libc.so.6 (0x00007f8009a00000)
+	/opt/base/lib64/ld-linux-x86-64.so.2 (0x00007f8009ec9000)
 
-# Should show /opt/base/lib/ld-linux-x86-64.so.2
+# Should show /opt/base/lib/ld-linux-x86-64.so.2 or ld-linux.so.2
 readelf -l ./your-binary | grep interpreter
       [Requesting program interpreter: /opt/base/lib64/ld-linux-x86-64.so.2]
 
+# Should show /opt/base/lib64 or /opt/base/lib
 readelf -d ./your-binary | grep -i 'rpath\|runpath\|needed'
  0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
  0x000000000000000f (RPATH)              Library rpath: [/opt/base/lib64:/opt/base/lib]

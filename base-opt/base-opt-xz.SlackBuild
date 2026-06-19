@@ -29,8 +29,6 @@ PRGNAM=base-opt-xz
 VERSION=${VERSION:-5.8.3}
 GIT_SHA=${TAR_SHA:-7e7bb6c21cf9c78f95a5049242fa35aebce38ea4}
 GIT_URL="https://github.com/tukaani-project/xz.git"
-#TAR_SHA=${TAR_SHA:-fff1ffcf2b0da84d308a14de513a1aa23d4e9aa3464d17e64b9714bfdd0bbfb6}
-#TAR_URL="https://github.com/tukaani-project/xz/releases/download/v5.8.3/xz-5.8.3.tar.xz"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
@@ -39,13 +37,12 @@ OPTIMIZED=${OPTIMIZED:-NO}
 # shellcheck disable=SC1091
 source helpers/bash_funktions
 
-use_opt_base
 set_multilib
 
 set -e
 
 prepare_git_source "$GIT_URL" "$GIT_SHA"
-#prepare_tar_source "$TAR_URL" "$TAR_SHA"
+
 set_permissions
 
 if [ "$OPTIMIZED" = "YES" ]; then
@@ -106,6 +103,7 @@ if [ "$MULTILIB" = "YES" ]; then
       -DCMAKE_INSTALL_LIBDIR=lib \
       -DBUILD_SHARED_LIBS=ON \
       -DBUILD_TESTING=OFF \
+      -DXZ_NLS=OFF \
       -DCMAKE_C_FLAGS="-m32" \
       -DCMAKE_ASM_FLAGS="-m32" \
       -DCMAKE_LINKER=/opt/base/lib/ld-linux.so.2 \
@@ -151,6 +149,7 @@ cd build64
     -DCMAKE_INSTALL_LIBDIR=lib64 \
     -DBUILD_SHARED_LIBS=ON \
     -DBUILD_TESTING=OFF \
+    -DXZ_NLS=OFF \
     -DCMAKE_LINKER=/opt/base/lib/ld-linux.so.2 \
     -DCMAKE_ADDR2LINE=/opt/base/bin/addr2line \
     -DCMAKE_AR=/opt/base/bin/ar \
