@@ -55,7 +55,7 @@ Notice how we rebuild gcc after glibc.
 | `base-opt-binutils`  | Rebuild against zlib zstd jansson (Stage 2)              |
 | `base-opt-gmp`       | Build once (Stageless)                                   |
 | `base-opt-mpfr`      | Build once (Stageless)                                   |
-| `base-opt-mpc`       | Build once (Stageless)                                   |
+| `base-opt-libmpc`    | Build once (Stageless)                                   |
 | `base-opt-isl`       | Build once (Stageless)                                   |
 | `base-opt-gcc`       | Rebuild against binutils zlib zstd (Stage 2)             |
 

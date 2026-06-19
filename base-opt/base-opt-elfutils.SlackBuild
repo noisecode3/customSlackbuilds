@@ -106,6 +106,7 @@ fi
 add_version_man "$VERSION"
 gzip_man
 
+only_C_en_US_locale "$PKG/opt/base/share/locale"
 install_docs AUTHORS COPYING*
 strip_pkg
 
