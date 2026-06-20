@@ -165,40 +165,40 @@ strip_pkg () {
 
 use_opt_gcc () {
   export PATH="/opt/gcc14/bin${PATH:+:$PATH}"
-  export LD_LIBRARY_PATH="/opt/gcc14/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  export LD_LIBRARY_PATH="/opt/gcc14/lib${LIBDIRSUFFIX}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 }
 
 use_opt_cmake () {
-  export PATH="/opt/cmake-opt/bin/:$PATH"
+  export PATH="/opt/cmake-opt/bin/${PATH:+:$PATH}"
 }
 
 use_opt_vulkan-sdk () {
-  export PATH="/opt/vulkan-sdk/bin:$PATH"
-  export LD_LIBRARY_PATH="/opt/vulkan-sdk/lib64/:$LD_LIBRARY_PATH"
-  export PKG_CONFIG_PATH="/opt/vulkan-sdk/lib64/pkgconfig:$PKG_CONFIG_PATH"
-  export CMAKE_PREFIX_PATH="/opt/vulkan-sdk:$CMAKE_PREFIX_PATH"
+  export PATH="/opt/vulkan-sdk/bin${PATH:+:$PATH}"
+  export LD_LIBRARY_PATH="/opt/vulkan-sdk/lib${LIBDIRSUFFIX}/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  export PKG_CONFIG_PATH="/opt/vulkan-sdk/lib${LIBDIRSUFFIX}/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+  export CMAKE_PREFIX_PATH="/opt/vulkan-sdk${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 }
 
 use_opt_aom () {
-  export PATH="/opt/aom/bin:$PATH"
-  export LD_LIBRARY_PATH="/opt/aom/lib64/:$LD_LIBRARY_PATH"
-  export PKG_CONFIG_PATH="/opt/aom/lib64/pkgconfig:$PKG_CONFIG_PATH"
-  export CMAKE_PREFIX_PATH="/opt/aom:$CMAKE_PREFIX_PATH"
+  export PATH="/opt/aom/bin${PATH:+:$PATH}"
+  export LD_LIBRARY_PATH="/opt/aom/lib${LIBDIRSUFFIX}/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  export PKG_CONFIG_PATH="/opt/aom/lib${LIBDIRSUFFIX}/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+  export CMAKE_PREFIX_PATH="/opt/aom${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 }
 
 use_opt_rust () {
-  export PATH="/opt/rust/bin:$PATH"
-  export LD_LIBRARY_PATH="/opt/rust/lib$LIBDIRSUFFIX:$LD_LIBRARY_PATH"
+  export PATH="/opt/rust/bin${PATH:+:$PATH}"
+  export LD_LIBRARY_PATH="/opt/rust/lib${LIBDIRSUFFIX}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 }
 
 use_opt_glib2 () {
-  export PATH="/opt/glib2/bin:$PATH"
-  export LD_LIBRARY_PATH="/opt/glib2/lib64/:$LD_LIBRARY_PATH"
-  export PKG_CONFIG_PATH="/opt/glib2/lib64/pkgconfig:$PKG_CONFIG_PATH"
+  export PATH="/opt/glib2/bin${PATH:+:$PATH}"
+  export LD_LIBRARY_PATH="/opt/glib2/lib${LIBDIRSUFFIX}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  export PKG_CONFIG_PATH="/opt/glib2/lib${LIBDIRSUFFIX}/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 }
 
 use_opt_ninja () {
-  export PATH="/opt/ninja/bin/:$PATH"
+  export PATH="/opt/ninja/bin/${PATH:+:$PATH}"
 }
 
 use_opt_python3 () {
@@ -208,14 +208,14 @@ use_opt_python3 () {
     echo "File not found: /opt/python3.12/bin/python3" >&2
     exit 1
   fi
-  export PATH="/opt/python3.12/bin:$PATH"
-  export LD_LIBRARY_PATH="/opt/python3.12/lib64:$LD_LIBRARY_PATH"
+  export PATH="/opt/python3.12/bin${PATH:+:$PATH}"
+  export LD_LIBRARY_PATH="/opt/python3.12/lib${LIBDIRSUFFIX}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 }
 
 use_opt_cairo () {
-  export PATH="/opt/cairo/bin:$PATH"
-  export LD_LIBRARY_PATH="/opt/cairo/lib64:$LD_LIBRARY_PATH"
-  export PKG_CONFIG_PATH="/opt/cairo/lib64/pkgconfig:$PKG_CONFIG_PATH"
+  export PATH="/opt/cairo/bin${PATH:+:$PATH}"
+  export LD_LIBRARY_PATH="/opt/cairo/lib${LIBDIRSUFFIX}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  export PKG_CONFIG_PATH="/opt/cairo/lib${LIBDIRSUFFIX}/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 }
 
 set_multilib () {

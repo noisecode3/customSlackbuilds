@@ -27,7 +27,7 @@ cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=clipcat
 VERSION=${VERSION:-0.25.0}
-GIT_SHA=${GIT_SHA:-cab2d4a54b7f0a3f926ecc5fd2a6b13f176f5eac} # after 0.25.0
+GIT_SHA=${GIT_SHA:-be84772da6978be2c3336c9fabd602f39ad5049b} # after 0.25.0
 GIT_URL="https://github.com/xrelkd/clipcat.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}

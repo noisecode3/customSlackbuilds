@@ -26,10 +26,10 @@
 cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=kitty
-VERSION=${VERSION:-0.46.2}
-GIT_SHA=${GIT_SHA:-4483a6c110275d5603e48337ba533a322781efe2}
+VERSION=${VERSION:-0.47.4}
+GIT_SHA=${GIT_SHA:-a685af8c351bc4521be17e939eb619b76dbcd646}
 GIT_URL=https://github.com/kovidgoyal/kitty
-TAR_SHA=${TAR_SHA:-e8ea44b13a1c70032a35128a8c4c8c29c90a7cfbe0ad4f6aa2927a057d10f83e}
+TAR_SHA=${TAR_SHA:-7dede3743ab614409903a839ba1f264f772f4271ddf251e7d60b333cb4e51278}
 TAR_URL=https://github.com/kovidgoyal/kitty/releases/download/v${VERSION}/kitty-${VERSION}.tar.xz
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
@@ -57,8 +57,7 @@ mkdir -p "$PKG/usr/bin" "$PKG/usr/libexec" "$PKG/usr/share" "$PKG/usr/lib$LIBDIR
 
 wrapper=$(cat <<'EOINS'
 #!/bin/bash
-export PATH="/opt/cairo/bin:/opt/python3.12/bin:$PATH"
-export LD_LIBRARY_PATH="/opt/cairo/lib64:/opt/python3.12/lib64:$LD_LIBRARY_PATH"
+export PATH="/opt/cairo/bin:/opt/python3.12/bin${PATH:+:$PATH}"
 exec /usr/libexec/kitty "$@"
 EOINS
 )
@@ -71,7 +70,13 @@ ln -sf "../libexec/kitten" "$PKG/usr/bin/kitten"
 cp linux-package/bin/kitty "$PKG/usr/libexec"
 strip --strip-unneeded "$PKG/usr/libexec/kitty"
 cp -a linux-package/share/* "$PKG/usr/share"
-cp -a linux-package/lib*/* "$PKG/usr/lib$LIBDIRSUFFIX"
+cp -a linux-package/lib*/* "$PKG/usr/lib${LIBDIRSUFFIX}"
+
+patchelf --add-rpath "/opt/cairo/lib${LIBDIRSUFFIX}" \
+  "$PKG/usr/lib64/kitty/kitty/fast_data_types.so"
+
+patchelf --add-rpath "/opt/python3.12/lib${LIBDIRSUFFIX}" \
+  "$PKG/usr/libexec/kitty"
 
 mv "$PKG/usr/share/man" "$PKG/usr/man"
 gzip "$PKG/usr/man/man"?/*.?

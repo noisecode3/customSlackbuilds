@@ -18,9 +18,9 @@ programming with cairo, then we have failed somewhere---let us know and we'll
 try to fix it next time around.
 
 add to you project /opt/cairo/include/
-export PKG_CONFIG_PATH="/opt/cairo/lib64/pkgconfig:$PKG_CONFIG_PATH"
+export PKG_CONFIG_PATH="/opt/cairo/lib64/pkgconfig"
 
 export PATH="/opt/cairo/bin:$PATH"
-export LD_LIBRARY_PATH="/opt/cairo/lib64:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/opt/cairo/lib64"
 
 This requires: ninja-opt meson-opt

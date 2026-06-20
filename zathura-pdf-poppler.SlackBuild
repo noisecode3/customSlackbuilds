@@ -26,8 +26,8 @@
 cd "$(dirname "$0")"; CWD=$(pwd)
 
 PRGNAM=zathura-pdf-poppler
-VERSION=${VERSION:-2026.02.03}
-GIT_SHA=${GIT_SHA:-dd4bf8dd53b22dc40c9c1859c58d53e27aa3400d}
+VERSION=${VERSION:-2026.05.10}
+GIT_SHA=${GIT_SHA:-8c266d0864df5a73a61fd80342eb3b238b6eb42c}
 GIT_URL="https://github.com/pwmt/zathura-pdf-poppler.git"
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
@@ -37,8 +37,9 @@ PKGTYPE=${PKGTYPE:-tgz}
 source helpers/bash_funktions
 
 use_opt_ninja
+use_opt_python3
 use_opt_glib2
-use_opt_gcc14
+use_opt_gcc
 
 set -e
 

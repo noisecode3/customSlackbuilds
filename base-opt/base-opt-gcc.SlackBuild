@@ -64,7 +64,6 @@ END_LC_32
 export PATH=/opt/base/bin:$PATH
 if [ -f /opt/base/include/stdio.h ] && [ "$STAGE1_FORCE" != "YES" ]; then
     echo -e " *\n * We link to /opt/base we are bootstraping (Stage 2)\n *"
-    export PATH=/opt/base/bin:$PATH
     export CC="/opt/base/bin/x86_64-slackware-linux-gcc"
     export CXX="/opt/base/bin/x86_64-slackware-linux-g++"
     EXTRA_FLAGS=" \

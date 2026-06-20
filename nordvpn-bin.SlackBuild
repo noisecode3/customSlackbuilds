@@ -28,7 +28,7 @@ cd "$(dirname "$0")" || exit 1; CWD=$(pwd)
 # we are a bit extra careful we don't let those get changed
 # and we analyze every update, for changes
 PRGNAM="nordvpn-bin"
-VERSION="4.6.0"
+VERSION="5.1.0"
 TAR_URL="https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/nordvpn_${VERSION}_amd64.deb"
 BUILD="1"
 TAG="_SBo"
@@ -167,6 +167,10 @@ mkdir -p usr/libexec/nordvpn
 mv usr/lib64/nordvpn/nordfileshare usr/libexec/nordvpn/
 mv usr/lib64/nordvpn/norduserd usr/libexec/nordvpn/
 mv usr/lib64/nordvpn/openvpn usr/libexec/nordvpn/
+
+# Hide data from normal users
+chmod 750 "$PKG/var/lib/nordvpn/"
+chmod 750 "$PKG/var/lib/nordvpn/data/"
 
 # Used with wrapper
 mv usr/bin/nordvpn usr/libexec/nordvpn/
