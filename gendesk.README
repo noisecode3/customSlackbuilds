@@ -1,0 +1,8 @@
+gendesk - generate .desktop files
+
+Gendesk is a Linux command-line tool that automatically creates .desktop files
+(application shortcuts) and downloads icons for your programs. It was originally
+made for the Arch Linux operating system, but now works on many Linux
+distributions.
+
+This requires: google-go-lang
