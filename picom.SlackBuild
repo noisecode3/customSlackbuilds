@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# Slackware build script for picom
+
+# Copyright Martin Bångens Sweden
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# shellcheck disable=SC2034
+cd "$(dirname "$0")"; CWD=$(pwd)
+
+PRGNAM=picom
+VERSION=${VERSION:-13.0}
+GIT_SHA=${GIT_SHA:-6d676824c457a933c52e3e92c5a1856466f90545}
+GIT_URL="https://github.com/yshui/picom.git"
+BUILD=${BUILD:-1}
+TAG=${TAG:-_SBo}
+PKGTYPE=${PKGTYPE:-tgz}
+OPTIMIZED=${OPTIMIZED:-NO}
+
+# shellcheck disable=SC1091
+source helpers/bash_funktions
+
+if [ "$OPTIMIZED" = "YES" ] && [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O3 -march=native -fPIC"
+fi
+
+set -e
+
+prepare_git_source "$GIT_URL" "$GIT_SHA"
+set_permissions
+
+CFLAGS="$SLKCFLAGS" \
+CXXFLAGS="$SLKCFLAGS" \
+meson build . -D with_docs=true -D b_ndebug=true --prefix=/usr --mandir=/usr/man
+DESTDIR=$PKG "${NINJA:=ninja}" -C build install
+
+install -D -m 0644 "$PRGNAM.sample.conf" "$PKG/etc/$PRGNAM.conf"
+
+strip_pkg
+gzip_man
+install_docs LICENSES/MIT
+
+#   |-----handy-ruler------------------------------------------------------|
+write_slack_desc "$PKG" "$PRGNAM" \
+    "$PRGNAM (X compositor)" \
+    "Picom is a compositor for X, and a fork of compton." \
+    "" \
+    "homepage: https://github.com/yshui/picom/"
+
+# This type of file good for files with default permissions
+doinst=$(cat <<'EOINS'
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database -q usr/share/applications >/dev/null 2>&1
+fi
+
+if [ -e usr/share/icons/hicolor/icon-theme.cache ]; then
+  if [ -x /usr/bin/gtk-update-icon-cache ]; then
+    /usr/bin/gtk-update-icon-cache -f usr/share/icons/hicolor >/dev/null 2>&1
+  fi
+fi
+EOINS
+)
+echo "$doinst" >> "$PKG/install/doinst.sh"
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

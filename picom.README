@@ -1,0 +1,76 @@
+Picom is a compositor for X, and a fork of compton (the name
+"compton" is retained internally in some places).
+It was forked from Dana Jansens' fork of xcompmgr due to a lack
+of lightweight standalone compositors, then refactored with bug
+fixes and new features. This build is version 13+.
+
+NOTE: When upgrading between versions, some config options may
+have changed, been deprecated, or removed, causing picom to fail
+to start. Launch "picom" from a terminal to see the error
+messages, then edit ~/.config/picom.conf accordingly.
+
+For real-time setups with audio (e.g. pulseaudio), it's recommended
+to run picom with a lower real-time priority than the audio server,
+so audio always preempts it, while still outranking all normal
+(non-RT) processes regardless of their nice value. If pulseaudio
+runs at rt_priority 5 (PRI -6 in htop, since PRI = -1 - rt_priority)
+Xorg/i3 at rt_priority 1, picom can safely use a lower rt_priority
+such as 2:
+
+  exec --no-startup-id chrt -r 2 picom
+
+If picom is instead started via /etc/xdg/autostart/picom.desktop,
+either wrap it with a script that adds chrt to the Exec= line, or
+run afterwards:
+
+  chrt -r -p 2 $(pidof picom)
+
+This is the most performant configuration on a new AMD-GPU
+
+  backend = "glx";
+  vsync = true;
+  use-damage = true;
+
+But I like this, you might like something else
+
+  fading = true;
+  fade-delta = 5;
+
+How to make Xorg more responsive?
+
+First, install and configure rtirq. It improves scheduling priority for
+audio and mouse-related processes:
+
+https://slackbuilds.org/repository/15.0/system/rtirq/
+
+For example, when using xdm, you might find the following line in
+/etc/X11/xdm/Xservers:
+
+:0 local /usr/bin/X :0 -maxclients 1024
+
+Change it to:
+
+:0 local /usr/bin/chrt -r 1 /usr/bin/X :0 -maxclients 1024
+
+Be very careful when doing this. If something goes wrong, you may
+need to boot from a USB drive and revert the change.
+
+With i3, edit /etc/X11/xinit/xinitrc.i3 and make sure it starts
+with the correct scheduling priority:
+
+exec /usr/bin/chrt -r 1 /usr/bin/i3
+
+Mine looks like this. Do not set the priority through dbus:
+
+# Start i3
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+  exec dbus-launch --exit-with-session /usr/bin/i3
+else
+  exec /usr/bin/i3
+fi
+
+Then apply the priority to the running i3 process:
+
+chrt -r -p 1 $(pgrep -x i3)
+
+This requires: libconfig, libev, setconf, uthash

@@ -7,5 +7,31 @@ wasn't easy to hack at all (source code comments/documentation
 completely lacking). Still, we think the wmii developers and
 contributors did a great job. Thank you for inspiring us to create i3.
 
+I start the SSH agent with the default configuration.
+This is just for me to remember the steps. You can skip this part.
+
+You have to generate the private key, then log in to GitHub using
+2-step verification with the code on your phone. Give GitHub the public
+key, and protect your private key with a password. After cloning
+your repository, run:
+
+git remote set-url origin git@github.com/repo.git
+
+Then, in ~/.ssh/config:
+
+Host github.com
+HostName ssh.github.com
+Port 443
+User git
+IdentityFile ~/.ssh/id_ed25519
+IdentitiesOnly yes
+
+In ~/.gitconfig
+[user]
+	name = Martin Bångens
+	email = noisecode3@gmail.com
+
+You need to be able to set the priority with chrt.
+
 i3status is optional, but useful to provide a system status bar.
 This requires: dmenu, libev, xcb-util-xrm, yajl, perl-AnyEvent, perl-JSON-XS
