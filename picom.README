@@ -34,7 +34,7 @@ This is the most performant configuration on a new AMD-GPU
 But I like this, you might like something else
 
   fading = true;
-  fade-delta = 5;
+  fade-delta = 6;
 
 How to make Xorg more responsive?
 

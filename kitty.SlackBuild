@@ -57,8 +57,8 @@ mkdir -p "$PKG/usr/bin" "$PKG/usr/libexec" "$PKG/usr/share" "$PKG/usr/lib$LIBDIR
 
 wrapper=$(cat <<'EOINS'
 #!/bin/bash
-export PATH="/opt/cairo/bin:/opt/python3.12/bin${PATH:+:$PATH}"
-exec /usr/libexec/kitty "$@"
+export PATH="/opt/cairo/bin:/opt/python3.12/bin:$PATH"
+exec /bin/nice -n -10 /usr/libexec/kitty "$@" >/dev/null 2>&1 &
 EOINS
 )
 echo "$wrapper" > "$PKG/usr/bin/kitty"

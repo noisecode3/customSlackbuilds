@@ -9,6 +9,11 @@ program like screen or tmux.
     line to ~/.config/kitty/kitty.conf:
     linux_display_server wayland
 
-[2] Requires hardware-accelerated OpenGL support.
+[2] You need to set nice value back to 0 or -1 in the following
+    line in you're ~/.config/kitty/kitty.conf:
+    shell nice -n 0 zsh --login
+
+[3] Requires hardware-accelerated OpenGL support.
+
 
 This requires: cairo-opt google-go-lang, librsync, ttf-nerd-fonts-symbols, simde
