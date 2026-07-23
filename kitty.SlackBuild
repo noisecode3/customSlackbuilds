@@ -58,7 +58,20 @@ mkdir -p "$PKG/usr/bin" "$PKG/usr/libexec" "$PKG/usr/share" "$PKG/usr/lib$LIBDIR
 wrapper=$(cat <<'EOINS'
 #!/bin/bash
 export PATH="/opt/cairo/bin:/opt/python3.12/bin:$PATH"
-exec /bin/nice -n -10 /usr/libexec/kitty "$@" >/dev/null 2>&1 &
+
+for arg in "$@"; do
+    case "$arg" in
+        --help|-h|--version)
+            exec /usr/libexec/kitty "$@"
+            ;;
+    esac
+done
+
+if [ "$#" -eq 0 ]; then
+    exec /bin/nice -n -10 /usr/libexec/kitty --title "Kitty" >/dev/null 2>&1 &
+else
+    exec /bin/nice -n -10 /usr/libexec/kitty --title "Kitty" "$@" &
+fi
 EOINS
 )
 echo "$wrapper" > "$PKG/usr/bin/kitty"
